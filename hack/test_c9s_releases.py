@@ -58,10 +58,10 @@ elif "/actions/workflows/cicd.yaml/runs" in endpoint:
     print(json.dumps([{
         "workflow_runs": [{
             "head_sha": "def5678901234",
-            "head_branch": "main",
+            "head_branch": "cms",
             "conclusion": "success",
             "updated_at": "2026-08-11T10:00:00Z",
-            "html_url": "https://example.test/main-run"
+            "html_url": "https://example.test/cms-run"
         }]
     }]))
 else:
@@ -166,7 +166,7 @@ sys.exit(0 if version in {"0.5.0", "0.6.0"} else 1)
         builds = MODULE._development_builds(self.gh, "example/repo")
         self.assertEqual(builds[0].version, "0.0.0-abc1234")
         self.assertEqual(builds[0].branch, "feature")
-        self.assertEqual(MODULE._main_build(self.gh, "example/repo").version, "0.0.0")
+        self.assertEqual(MODULE._cms_build(self.gh, "example/repo").version, "0.0.0")
 
     def test_github_cli_failure_is_reported_as_exit(self) -> None:
         failing_gh = Path(self.directory.name) / "failing-gh"

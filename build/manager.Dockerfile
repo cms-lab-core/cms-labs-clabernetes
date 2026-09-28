@@ -37,7 +37,7 @@ RUN --mount=type=cache,target=/root/.cache/go-build \
 
 FROM gcr.io/distroless/static-debian12:nonroot
 
-LABEL org.opencontainers.image.source="https://github.com/clabernetes/clabernetes"
+LABEL org.opencontainers.image.source="https://github.com/maintainer64/cms-labs-clabernetes"
 
 WORKDIR /clabernetes
 COPY --from=builder --chown=nonroot:root /clabernetes/certificates /clabernetes/certificates

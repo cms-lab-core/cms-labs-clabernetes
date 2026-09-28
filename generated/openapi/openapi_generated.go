@@ -49,6 +49,9 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/clabernetes/clabernetes/apis/v1alpha1.ConfigImagePull": schema_clabernetes_clabernetes_apis_v1alpha1_ConfigImagePull(
 			ref,
 		),
+		"github.com/clabernetes/clabernetes/apis/v1alpha1.ConfigLauncher": schema_clabernetes_clabernetes_apis_v1alpha1_ConfigLauncher(
+			ref,
+		),
 		"github.com/clabernetes/clabernetes/apis/v1alpha1.ConfigList": schema_clabernetes_clabernetes_apis_v1alpha1_ConfigList(
 			ref,
 		),
@@ -157,6 +160,9 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/clabernetes/clabernetes/apis/v1alpha1.NodeProfileImagePull": schema_clabernetes_clabernetes_apis_v1alpha1_NodeProfileImagePull(
 			ref,
 		),
+		"github.com/clabernetes/clabernetes/apis/v1alpha1.NodeProfileLauncher": schema_clabernetes_clabernetes_apis_v1alpha1_NodeProfileLauncher(
+			ref,
+		),
 		"github.com/clabernetes/clabernetes/apis/v1alpha1.NodeProfileList": schema_clabernetes_clabernetes_apis_v1alpha1_NodeProfileList(
 			ref,
 		),
@@ -197,6 +203,9 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 			ref,
 		),
 		"github.com/clabernetes/clabernetes/apis/v1alpha1.Topology": schema_clabernetes_clabernetes_apis_v1alpha1_Topology(
+			ref,
+		),
+		"github.com/clabernetes/clabernetes/apis/v1alpha1.TopologyLauncher": schema_clabernetes_clabernetes_apis_v1alpha1_TopologyLauncher(
 			ref,
 		),
 		"github.com/clabernetes/clabernetes/apis/v1alpha1.TopologyList": schema_clabernetes_clabernetes_apis_v1alpha1_TopologyList(
@@ -493,11 +502,19 @@ func schema_clabernetes_clabernetes_apis_v1alpha1_ConfigDeployment(
 							Format:      "",
 						},
 					},
+					"launcher": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Launcher holds the launcher image settings: the helper image clabernetes adds to a device Pod for the features the distroless manager image cannot provide itself -- currently the per-node web terminal. An empty image leaves the launcher unpinned here and defers to the manager's own LAUNCHER_IMAGE environment (set from the chart's launcher.image value), so an install that never enables the web terminal needs no launcher at all.",
+							Ref: ref(
+								"github.com/clabernetes/clabernetes/apis/v1alpha1.ConfigLauncher",
+							),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"k8s.io/api/core/v1.ResourceRequirements"},
+			"github.com/clabernetes/clabernetes/apis/v1alpha1.ConfigLauncher", "k8s.io/api/core/v1.ResourceRequirements"},
 	}
 }
 
@@ -620,6 +637,35 @@ func schema_clabernetes_clabernetes_apis_v1alpha1_ConfigImagePull(
 		},
 		Dependencies: []string{
 			"github.com/clabernetes/clabernetes/apis/v1alpha1.RegistryMetadataMirrorEntry", "github.com/clabernetes/clabernetes/apis/v1alpha1.RegistryMetadataTrustEntry"},
+	}
+}
+
+func schema_clabernetes_clabernetes_apis_v1alpha1_ConfigLauncher(
+	ref common.ReferenceCallback,
+) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ConfigLauncher holds the launcher image settings for the per-node helper containers. It is the cluster-wide default; a Topology's spec.deployment.launcher and a node's containerlab launcher-image field each override it, the former for one topology and the latter for one node.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"image": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Image is the launcher image, including any tag or digest. Empty means \"use the manager's environment default\" (the chart's launcher.image value).",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"imagePullPolicy": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ImagePullPolicy is the pull policy applied to the launcher image. When empty the device image's resolved pull policy is used.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+			},
+		},
 	}
 }
 
@@ -1020,11 +1066,19 @@ func schema_clabernetes_clabernetes_apis_v1alpha1_Deployment(
 							),
 						},
 					},
+					"launcher": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Launcher overrides the cluster-wide launcher image for every node of this topology. An empty image leaves the Config/manager default in place; a node's own containerlab launcher-image field overrides this in turn.",
+							Ref: ref(
+								"github.com/clabernetes/clabernetes/apis/v1alpha1.TopologyLauncher",
+							),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/clabernetes/clabernetes/apis/v1alpha1.FileFromConfigMap", "github.com/clabernetes/clabernetes/apis/v1alpha1.FileFromSecret", "github.com/clabernetes/clabernetes/apis/v1alpha1.FileFromURL", "github.com/clabernetes/clabernetes/apis/v1alpha1.Persistence", "github.com/clabernetes/clabernetes/apis/v1alpha1.Scheduling", "k8s.io/api/core/v1.ResourceRequirements"},
+			"github.com/clabernetes/clabernetes/apis/v1alpha1.FileFromConfigMap", "github.com/clabernetes/clabernetes/apis/v1alpha1.FileFromSecret", "github.com/clabernetes/clabernetes/apis/v1alpha1.FileFromURL", "github.com/clabernetes/clabernetes/apis/v1alpha1.Persistence", "github.com/clabernetes/clabernetes/apis/v1alpha1.Scheduling", "github.com/clabernetes/clabernetes/apis/v1alpha1.TopologyLauncher", "k8s.io/api/core/v1.ResourceRequirements"},
 	}
 }
 
@@ -1910,6 +1964,20 @@ func schema_clabernetes_clabernetes_apis_v1alpha1_NodeDefinition(
 							Format:      "int32",
 						},
 					},
+					"launcher-image": {
+						SchemaProps: spec.SchemaProps{
+							Description: "LauncherImage pins the launcher image for this node only -- the helper image the direct Pod carries for the features the distroless manager image cannot provide itself. It overrides both the Topology's spec.deployment.launcher.image and the cluster-wide Config launcher image, and it exists so one node of a lab can be debugged against a locally built launcher while the rest of the lab stays on the released image.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"ttyd-shell": {
+						SchemaProps: spec.SchemaProps{
+							Description: "TTYDShell enables the per-node web terminal for this node and names the shell that terminal runs. The terminal is served by a ttyd/tmux sidecar running in this device Pod's launcher image: the sidecar enters the device container's mount namespace and starts the named shell there, so a browser session works against the device itself while the device's own process keeps running. Name a shell that exists in the device image -- \"bash\", \"sh\", or \"cli\" -- or leave it empty for /bin/sh. It cannot be the literal \"attach\": a container runtime owns the pty behind the device console, so a sidecar cannot read it (expose the device's own console ports instead). Grouped nodes share one Pod and therefore one terminal port, so at most one member of a group may set this.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
 					"restart-policy": {
 						SchemaProps: spec.SchemaProps{
 							Description: "RestartPolicy is the container restart policy for the node. Only the values with a shared-Pod mapping are accepted -- a device container in a direct Pod always restarts with its Pod, so Docker's \"no\" and \"on-failure\" policies cannot be represented.",
@@ -2594,11 +2662,19 @@ func schema_clabernetes_clabernetes_apis_v1alpha1_NodeProfileDeployment(
 							),
 						},
 					},
+					"launcher": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Launcher overrides the launcher image for every node this profile applies to. It is how a Topology's spec.deployment.launcher.image reaches a device Pod, and it overrides the cluster-wide Config launcher image; a node's own containerlab launcher-image field overrides it in turn.",
+							Ref: ref(
+								"github.com/clabernetes/clabernetes/apis/v1alpha1.NodeProfileLauncher",
+							),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/clabernetes/clabernetes/apis/v1alpha1.Persistence"},
+			"github.com/clabernetes/clabernetes/apis/v1alpha1.NodeProfileLauncher", "github.com/clabernetes/clabernetes/apis/v1alpha1.Persistence"},
 	}
 }
 
@@ -2678,6 +2754,28 @@ func schema_clabernetes_clabernetes_apis_v1alpha1_NodeProfileImagePull(
 									},
 								},
 							},
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+func schema_clabernetes_clabernetes_apis_v1alpha1_NodeProfileLauncher(
+	ref common.ReferenceCallback,
+) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "NodeProfileLauncher holds the launcher image override carried by a NodeProfile. Like the Topology-level launcher it is a plain image reference: the pull policy stays a cluster concern.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"image": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Image is the launcher image, including any tag or digest.",
+							Type:        []string{"string"},
+							Format:      "",
 						},
 					},
 				},
@@ -2892,6 +2990,20 @@ func schema_clabernetes_clabernetes_apis_v1alpha1_NodeSpec(
 							Description: "StartupDelay is an optional delay in seconds applied before the node's application container starts.",
 							Type:        []string{"integer"},
 							Format:      "int32",
+						},
+					},
+					"launcher-image": {
+						SchemaProps: spec.SchemaProps{
+							Description: "LauncherImage pins the launcher image for this node only -- the helper image the direct Pod carries for the features the distroless manager image cannot provide itself. It overrides both the Topology's spec.deployment.launcher.image and the cluster-wide Config launcher image, and it exists so one node of a lab can be debugged against a locally built launcher while the rest of the lab stays on the released image.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"ttyd-shell": {
+						SchemaProps: spec.SchemaProps{
+							Description: "TTYDShell enables the per-node web terminal for this node and names the shell that terminal runs. The terminal is served by a ttyd/tmux sidecar running in this device Pod's launcher image: the sidecar enters the device container's mount namespace and starts the named shell there, so a browser session works against the device itself while the device's own process keeps running. Name a shell that exists in the device image -- \"bash\", \"sh\", or \"cli\" -- or leave it empty for /bin/sh. It cannot be the literal \"attach\": a container runtime owns the pty behind the device console, so a sidecar cannot read it (expose the device's own console ports instead). Grouped nodes share one Pod and therefore one terminal port, so at most one member of a group may set this.",
+							Type:        []string{"string"},
+							Format:      "",
 						},
 					},
 					"restart-policy": {
@@ -3840,6 +3952,28 @@ func schema_clabernetes_clabernetes_apis_v1alpha1_Topology(
 		},
 		Dependencies: []string{
 			"github.com/clabernetes/clabernetes/apis/v1alpha1.TopologySpec", "github.com/clabernetes/clabernetes/apis/v1alpha1.TopologyStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+	}
+}
+
+func schema_clabernetes_clabernetes_apis_v1alpha1_TopologyLauncher(
+	ref common.ReferenceCallback,
+) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "TopologyLauncher holds the launcher image override compiled from a Topology. It is a plain image reference: the pull policy stays a cluster concern (Config's launcher.imagePullPolicy, or the device image's resolved policy when that is unset) so a topology cannot silently change how the helper image is fetched.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"image": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Image is the launcher image, including any tag or digest.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+			},
+		},
 	}
 }
 

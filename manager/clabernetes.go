@@ -67,6 +67,7 @@ func StartClabernetes(initializer bool) {
 		initializer:      initializer,
 		logger:           clabernetesLogger,
 		nodeRuntimeImage: os.Getenv(clabernetesconstants.NodeRuntimeImageEnv),
+		launcherImage:    os.Getenv(clabernetesconstants.LauncherImageEnv),
 	}
 
 	clabernetesInstance.start()
@@ -92,6 +93,9 @@ type clabernetes struct {
 	kubeClabernetesClient *clabernetesgeneratedclientset.Clientset
 
 	nodeRuntimeImage string
+
+	// launcherImage is the chart's launcher.image default; the config CR overrides it.
+	launcherImage string
 
 	scheme *apimachineryruntime.Scheme
 	mgr    ctrlruntime.Manager
@@ -124,6 +128,10 @@ func (c *clabernetes) GetNamespace() string {
 
 func (c *clabernetes) GetNodeRuntimeImage() string {
 	return c.nodeRuntimeImage
+}
+
+func (c *clabernetes) GetLauncherImage() string {
+	return c.launcherImage
 }
 
 func (c *clabernetes) IsInitializer() bool {

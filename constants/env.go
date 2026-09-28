@@ -18,6 +18,12 @@ const (
 	// helpers. It contains the c9s integration binary, not containerlab kind knowledge.
 	NodeRuntimeImageEnv = "NODE_RUNTIME_IMAGE"
 
+	// LauncherImageEnv is the default launcher image: the helper image direct device Pods carry
+	// for what the distroless manager image cannot do itself (currently the per-node web
+	// terminal). The chart's launcher.image value sets it, and the Config CR's
+	// spec.deployment.launcher.image overrides it.
+	LauncherImageEnv = "LAUNCHER_IMAGE"
+
 	// ClientOperationTimeoutMultiplierEnv is the multiplier applied to the default client
 	// operation timeout.
 	ClientOperationTimeoutMultiplierEnv = "CLIENT_OPERATION_TIMEOUT_MULTIPLIER"

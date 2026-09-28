@@ -1,5 +1,5 @@
 TRY_C9S_CLUSTER_NAME ?= try-c9s
-TRY_C9S_CHART ?= oci://ghcr.io/clabernetes/clabernetes/clabernetes
+TRY_C9S_CHART ?= oci://ghcr.io/maintainer64/cms-labs-clabernetes/clabernetes
 TRY_C9S_CHART_VERSION ?=
 TRY_C9S_TOPOLOGY ?= examples/basic/srl-multitool.yaml
 TRY_C9S_TOPOLOGY_NAME ?= srl-multitool
@@ -153,18 +153,18 @@ try-c9s-install: try-c9s-metallb
 		chart_version="$(TRY_C9S_CHART_VERSION)"; \
 		install_selection="$$chart_version"; \
 		source_selector="$$chart_version"; \
-	elif [ "$$selection" = "main" ]; then \
+	elif [ "$$selection" = "cms" ]; then \
 		chart_version="0.0.0"; \
-		source_selector="main"; \
+		source_selector="cms"; \
 	elif [ "$$selection" = "local" ]; then \
 		chart_version="0.0.0"; \
 		source_selector="local"; \
 	elif [ "$$selection" = "select" ]; then \
 		install_selection="$$($(UV) run --script "$(abspath hack/c9s_releases.py)" select --gh "$(abspath $(GH))" --helm "$(abspath $(HELM))")"; \
 		chart_version="$$install_selection"; \
-		if [ "$$chart_version" = "main" ]; then \
+		if [ "$$chart_version" = "cms" ]; then \
 			chart_version="0.0.0"; \
-			source_selector="main"; \
+			source_selector="cms"; \
 		else \
 			source_selector="$$chart_version"; \
 		fi; \
@@ -194,7 +194,7 @@ try-c9s-apply-topology: try-c9s-install
 	if [ -f "$(TRY_C9S_STATE_DIR)/source-selector" ]; then source_selector="$$(awk 'NF {print; exit}' "$(TRY_C9S_STATE_DIR)/source-selector")"; fi; \
 	if [ "$$topology" = "examples/basic/srl-multitool.yaml" ] && [ "$$source_selector" != "local" ]; then \
 		revision=""; \
-		if [ "$$source_selector" = "main" ] || [ "$$source_selector" = "0.0.0" ] || printf '%s' "$$source_selector" | grep -Eq '^0\.0\.0-[0-9a-f]{7,40}$$'; then \
+		if [ "$$source_selector" = "cms" ] || [ "$$source_selector" = "0.0.0" ] || printf '%s' "$$source_selector" | grep -Eq '^0\.0\.0-[0-9a-f]{7,40}$$'; then \
 			version="0.0.0"; \
 			if printf '%s' "$$source_selector" | grep -Eq '^0\.0\.0-[0-9a-f]{7,40}$$'; then version="$$source_selector"; fi; \
 			revision="$$($(HELM) show chart "$(TRY_C9S_CHART)" --version "$$version" | $(YQ) -r '.annotations."org.opencontainers.image.revision" // ""')"; \
@@ -205,7 +205,7 @@ try-c9s-apply-topology: try-c9s-install
 			revision="$$tag"; \
 			echo "--> TRY-C9S: fetching demo from Git tag $$tag"; \
 		fi; \
-		$(GH) api "repos/clabernetes/clabernetes/contents/examples/basic/srl-multitool.yaml?ref=$$revision" --jq .content | base64 --decode > "$(TRY_C9S_STATE_DIR)/topology.yaml"; \
+		$(GH) api "repos/maintainer64/cms-labs-clabernetes/contents/examples/basic/srl-multitool.yaml?ref=$$revision" --jq .content | base64 --decode > "$(TRY_C9S_STATE_DIR)/topology.yaml"; \
 		topology="$(TRY_C9S_STATE_DIR)/topology.yaml"; \
 	fi; \
 	echo "--> TRY-C9S: applying sample topology $$topology"; \

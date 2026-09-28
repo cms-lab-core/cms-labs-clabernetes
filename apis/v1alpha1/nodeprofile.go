@@ -84,6 +84,20 @@ type NodeProfileDeployment struct {
 	// Persistence enables persistence of the containerlab working directory.
 	// +optional
 	Persistence *Persistence `json:"persistence,omitempty"`
+	// Launcher overrides the launcher image for every node this profile applies to. It is how a
+	// Topology's spec.deployment.launcher.image reaches a device Pod, and it overrides the
+	// cluster-wide Config launcher image; a node's own containerlab launcher-image field overrides
+	// it in turn.
+	// +optional
+	Launcher *NodeProfileLauncher `json:"launcher,omitempty"`
+}
+
+// NodeProfileLauncher holds the launcher image override carried by a NodeProfile. Like the
+// Topology-level launcher it is a plain image reference: the pull policy stays a cluster concern.
+type NodeProfileLauncher struct {
+	// Image is the launcher image, including any tag or digest.
+	// +optional
+	Image string `json:"image,omitempty"`
 }
 
 // ManagementPolicy defines direct management-overlay address allocation. Docker network identity,

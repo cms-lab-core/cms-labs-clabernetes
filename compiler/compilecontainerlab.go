@@ -83,6 +83,7 @@ func compileContainerlabDefinition(
 	for _, nodeName := range nodeNames {
 		compiled.Nodes[nodeName], err = flattenNodeDefinition(
 			importedTopology,
+			containerlabConfig.Topology,
 			nodeName,
 		)
 		if err != nil {
@@ -834,6 +835,7 @@ func loadImportedNodeTopology(definition string) (*clabtypes.Topology, error) {
 // value. c9s owns the primitive shape, but it does not duplicate containerlab's inheritance rules.
 func flattenNodeDefinition(
 	topology *clabtypes.Topology,
+	curated *clabernetesutilcontainerlab.Topology,
 	nodeName string,
 ) (*clabernetesutilcontainerlab.NodeDefinition, error) {
 	flattened := &clabernetesutilcontainerlab.NodeDefinition{
@@ -863,6 +865,11 @@ func flattenNodeDefinition(
 		EnvFiles:      slices.Clone(topology.GetNodeEnvFiles(nodeName)),
 		Sysctls:       maps.Clone(topology.GetSysCtl(nodeName)),
 		Labels:        maps.Clone(topology.GetNodeLabels(nodeName)),
+		// the launcher image and web terminal are c9s' own node vocabulary, so they are
+		// resolved from the curated projection (with the same inheritance layers) rather than
+		// from the imported containerlab Topology
+		LauncherImage: curated.GetNodeLauncherImage(nodeName),
+		TTYDShell:     curated.GetNodeTTYDShell(nodeName),
 	}
 
 	layers := importedNodeLayers(topology, nodeName)

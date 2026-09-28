@@ -16,7 +16,7 @@ The repository SHALL provide `make install` for installation into an existing Ku
 
 ### Requirement: Common source selection contract
 
-Both `make install` and `make try-c9s` SHALL accept `VERSION=latest`, `VERSION=main`, an exact published version with or without a leading `v`, an exact unpublished `0.0.0-<sha>` version, `VERSION=local`, or `VERSION=select`. When `VERSION` is unset, either target SHALL behave as latest without prompting.
+Both `make install` and `make try-c9s` SHALL accept `VERSION=latest`, `VERSION=cms`, an exact published version with or without a leading `v`, an exact unpublished `0.0.0-<sha>` version, `VERSION=local`, or `VERSION=select`. When `VERSION` is unset, either target SHALL behave as latest without prompting.
 
 #### Scenario: Default latest installation
 
@@ -28,9 +28,9 @@ Both `make install` and `make try-c9s` SHALL accept `VERSION=latest`, `VERSION=m
 - **WHEN** a user sets `VERSION=v0.6.0` or `VERSION=0.6.0` for either installation target
 - **THEN** the target normalizes the selection and requests OCI chart version `0.6.0`
 
-#### Scenario: Mutable main installation
+#### Scenario: Mutable cms installation
 
-- **WHEN** a user sets `VERSION=main` for either installation target
+- **WHEN** a user sets `VERSION=cms` for either installation target
 - **THEN** the target requests OCI chart version `0.0.0`, reports it as a mutable development channel, and does not classify it as latest stable
 
 #### Scenario: Exact unpublished installation
@@ -46,7 +46,7 @@ Both `make install` and `make try-c9s` SHALL accept `VERSION=latest`, `VERSION=m
 #### Scenario: Interactive selection
 
 - **WHEN** a user sets `VERSION=select` for either installation target in an interactive terminal
-- **THEN** the target displays the stable/development selector and installs the selected exact artifact or main channel
+- **THEN** the target displays the stable/development selector and installs the selected exact artifact or cms channel
 
 ### Requirement: Repository-controlled installation toolchain
 
@@ -117,7 +117,7 @@ For every stable or development remote source, the installer SHALL probe the exa
 
 #### Scenario: Main chart is selected
 
-- **WHEN** the user selects `main`
+- **WHEN** the user selects `cms`
 - **THEN** installation probes exact chart version `0.0.0` and validates its source revision and immutable commit image pins
 
 #### Scenario: Unpublished chart is selected
@@ -213,7 +213,7 @@ After Helm deployment, the installer SHALL reconcile only the Config singleton's
 
 ### Requirement: Source-compatible try demo
 
-`make try-c9s` SHALL apply the checkout demo for local source, SHALL retrieve the demo from the immutable selected Git tag for supported published source, and SHALL retrieve the demo from chart source-revision metadata for main and exact unpublished builds. Published demo support SHALL begin at `v0.6.0`. Demo readiness timeout SHALL produce diagnostics and fail the target.
+`make try-c9s` SHALL apply the checkout demo for local source, SHALL retrieve the demo from the immutable selected Git tag for supported published source, and SHALL retrieve the demo from chart source-revision metadata for cms and exact unpublished builds. Published demo support SHALL begin at `v0.6.0`. Demo readiness timeout SHALL produce diagnostics and fail the target.
 
 #### Scenario: Latest or exact supported published demo
 
@@ -227,7 +227,7 @@ After Helm deployment, the installer SHALL reconcile only the Config singleton's
 
 #### Scenario: Development artifact demo
 
-- **WHEN** `make try-c9s` installs main or an exact unpublished commit build
+- **WHEN** `make try-c9s` installs cms or an exact unpublished commit build
 - **THEN** it applies the demo from the full source revision recorded in the selected chart
 
 #### Scenario: Historical release below demo support floor

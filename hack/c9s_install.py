@@ -27,8 +27,8 @@ app = typer.Typer(add_completion=False, no_args_is_help=True)
 console = Console()
 error_console = Console(stderr=True)
 
-DEFAULT_CHART = "oci://ghcr.io/clabernetes/clabernetes/clabernetes"
-DEFAULT_IMAGE_BASE = "ghcr.io/clabernetes/clabernetes"
+DEFAULT_CHART = "oci://ghcr.io/maintainer64/cms-labs-clabernetes/clabernetes"
+DEFAULT_IMAGE_BASE = "ghcr.io/maintainer64/cms-labs-clabernetes"
 RELEASE_SCRIPT = Path(__file__).with_name("c9s_releases.py")
 CONTEXT_OPTION = typer.Option("")
 NAMESPACE_OPTION = typer.Option("c9s")
@@ -383,9 +383,9 @@ def install(
             ],
             capture=True,
         ).strip()
-        if selected_version == "main":
+        if selected_version == "cms":
             selected_version = "0.0.0"
-    elif selection in {"local", "main"}:
+    elif selection in {"local", "cms"}:
         selected_version = "0.0.0"
     else:
         selected_version = resolve_version(tools, selection)

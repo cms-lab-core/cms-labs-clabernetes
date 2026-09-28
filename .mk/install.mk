@@ -2,12 +2,12 @@
 ## ----------------------------------------------------------------------------|
 
 C9S_CONTEXT ?=
-C9S_CHART_REF ?= oci://ghcr.io/clabernetes/clabernetes/clabernetes
+C9S_CHART_REF ?= oci://ghcr.io/maintainer64/cms-labs-clabernetes/clabernetes
 C9S_HELM_RELEASE ?= clabernetes
 C9S_NAMESPACE ?= $(NS)
 C9S_INSTALL_TIMEOUT ?= 10m
 C9S_IMAGE_TRANSPORT ?=
-C9S_REGISTRY ?= ghcr.io/clabernetes/clabernetes
+C9S_REGISTRY ?= ghcr.io/maintainer64/cms-labs-clabernetes
 C9S_KIND_CLUSTER ?=
 C9S_LOCAL_IMAGE_TAG ?= $(C9S_LOCAL_BUILD_ID)
 C9S_LOCAL_REUSE_IMAGES ?= 0

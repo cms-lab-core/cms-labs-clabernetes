@@ -8,7 +8,7 @@ The repository currently has three materially different deployment paths:
 
 There is no c9s `make install` target for an existing cluster. The paths also disagree on tool versions and installation identity. The current live `c9s-e2e` cluster illustrates the observability problem: Helm reports chart `0.0.0`, the images are mutable `dev-latest` tags, and the old binary does not expose a usable version flag.
 
-The `cicd` workflow handles pull requests and main pushes. A main push overwrites OCI chart `0.0.0`; because its image values were empty, chart templates could resolve manager and launcher to mutable `dev-latest`. A separate `Create dev release` manual workflow builds a selected branch or tag as multi-architecture images and a chart at `0.0.0-<short-sha>`, with chart values pinned to matching image tags and no GitHub Release object. Both paths retain exact artifact probing and install smoke because workflow success alone is not an installability guarantee.
+The `cicd` workflow handles pull requests and cms pushes. A cms push overwrites OCI chart `0.0.0`; because its image values were empty, chart templates could resolve manager and launcher to mutable `dev-latest`. A separate `Create dev release` manual workflow builds a selected branch or tag as multi-architecture images and a chart at `0.0.0-<short-sha>`, with chart values pinned to matching image tags and no GitHub Release object. Both paths retain exact artifact probing and install smoke because workflow success alone is not an installability guarantee.
 
 Published and checkout resources are not necessarily compatible. At proposal time, GitHub's latest release is `v0.6.0`; its chart installs `clabernetes.containerlab.dev` CRDs, while the checkout demo and chart use `c9s.run`. Helm does not perform an in-place migration between those groups, and the existing `crd-api-group` specification requires uninstall/reinstall.
 
@@ -20,7 +20,7 @@ The installation interface must remain automation-friendly while also offering a
 
 - Give `make try-c9s` and `make install` one shared installation implementation.
 - Make latest, exact published, interactive, and local-checkout selections explicit and verifiable.
-- Make mutable main and exact unpublished commit builds explicit development channels, separate from latest stable.
+- Make mutable cms and exact unpublished commit builds explicit development channels, separate from latest stable.
 - Let a developer publish tested, source-identifiable artifacts for a feature ref and hand other users exact install and try commands.
 - Keep `make try-c9s` a non-interactive one-command latest-release experience by default.
 - Use only repository-local pinned Helm, kubectl, KinD, yq, and UV binaries during installation.
@@ -71,7 +71,7 @@ The public variable is:
 
 ```text
 VERSION=latest         # make install default
-VERSION=main           # mutable chart 0.0.0 from the latest successful main publication
+VERSION=cms           # mutable chart 0.0.0 from the latest successful cms publication
 VERSION=vX.Y.Z         # exact published release; X.Y.Z is also accepted
 VERSION=0.0.0-<sha>    # exact unpublished commit build
 VERSION=local          # checkout chart and images
@@ -80,7 +80,7 @@ VERSION=select         # interactive stable/development picker
 
 Existing chart/namespace/context override variables remain available where practical, but all source modes normalize into an internal structure containing:
 
-- source kind (`release`, `main`, `unpublished`, or `local`);
+- source kind (`release`, `cms`, `unpublished`, or `local`);
 - GitHub tag when published;
 - normalized unprefixed OCI chart version;
 - full source revision when supplied by development chart metadata;
@@ -89,7 +89,7 @@ Existing chart/namespace/context override variables remain available where pract
 - desired manager and launcher image references;
 - demo reference when `try-c9s` is used.
 
-`latest` means GitHub's latest stable published release, not Helm's unversioned OCI resolution, main chart `0.0.0`, or a mutable image tag. `main` explicitly selects chart `0.0.0`. Exact unpublished builds use the valid SemVer prerelease form `0.0.0-<short-sha>`. Every remote mode invokes Helm with an exact `--version`.
+`latest` means GitHub's latest stable published release, not Helm's unversioned OCI resolution, cms chart `0.0.0`, or a mutable image tag. `cms` explicitly selects chart `0.0.0`. Exact unpublished builds use the valid SemVer prerelease form `0.0.0-<short-sha>`. Every remote mode invokes Helm with an exact `--version`.
 
 Alternative considered: separate source and version variables. Rejected because one version selector per Make entrypoint is smaller for users and still normalizes unambiguously.
 
@@ -110,17 +110,17 @@ The script provides commands for listing, selecting, and resolving releases. It:
 - writes Rich UI to stderr and only the selected normalized value to stdout when called by Make;
 - reports API rate-limit and network failures without a traceback.
 
-The selector also exposes a distinct development view. It presents `main` as a moving channel and obtains recent manually dispatched build candidates from successful `Create dev release` workflow runs through `gh api` against the GitHub Actions API. Action completion is labeled as workflow completion, not release publication or package push time. A development candidate is still installable only after the exact OCI chart probe succeeds.
+The selector also exposes a distinct development view. It presents `cms` as a moving channel and obtains recent manually dispatched build candidates from successful `Create dev release` workflow runs through `gh api` against the GitHub Actions API. Action completion is labeled as workflow completion, not release publication or package push time. A development candidate is still installable only after the exact OCI chart probe succeeds.
 
 The public `make ls-releases` target produces a Rich table of all installable c9s artifacts: GitHub
-Releases, the mutable `main` chart at `0.0.0`, and successful manual development builds at
+Releases, the mutable `cms` chart at `0.0.0`, and successful manual development builds at
 `0.0.0-<short-sha>`. The script receives the absolute repository-local Helm path, probes candidates
 concurrently, and sorts them by publication or workflow-availability time descending. By default it
 stops after the newest 10 installable artifacts; `make ls-releases ALL=1` probes and displays the
 complete catalog. It omits candidates whose exact chart is unavailable and reports the omitted count
 for candidates it checked. The table includes one normalized **Version** column—the value users can
 pass as `VERSION` to `make install`—along with channel, source URL, and **Published/available
-(UTC)**. The `main` row displays Version `0.0.0`; `VERSION=0.0.0` and `VERSION=main` select that
+(UTC)**. The `cms` row displays Version `0.0.0`; `VERSION=0.0.0` and `VERSION=cms` select that
 channel.
 This target performs no cluster access or mutation.
 
@@ -134,9 +134,9 @@ Alternative considered: direct Python HTTP calls. Rejected because they would du
 
 Alternative considered: use shell and `gh api` without Python. Rejected because the Rich/Typer interactive selector and normalized machine-output contract still require structured application logic.
 
-### 4. Model unpublished commit and main artifacts as development channels
+### 4. Model unpublished commit and cms artifacts as development channels
 
-Keep `cicd` focused on pull-request validation and main-merge publication, and use a separate `Create dev release` entrypoint for ad-hoc publication. Both call one reusable development publisher rather than duplicating the image, chart, metadata, verification, and smoke implementation.
+Keep `cicd` focused on pull-request validation and cms-merge publication, and use a separate `Create dev release` entrypoint for ad-hoc publication. Both call one reusable development publisher rather than duplicating the image, chart, metadata, verification, and smoke implementation.
 
 For manual unpublished builds:
 
@@ -153,14 +153,14 @@ the compatible demo from the full source revision recorded in the chart.
 
 GitHub workflow dispatch selects a branch or tag ref; it does not directly select an arbitrary detached SHA. For feature development, the desired commit must be the head of the selected branch/tag. The workflow summary records the resolved full SHA so the artifact remains auditable after the branch moves.
 
-For main builds, preserve chart version `0.0.0` as a deliberately mutable edge alias, but package it with:
+For cms builds, preserve chart version `0.0.0` as a deliberately mutable edge alias, but package it with:
 
 - full source SHA as chart application/source metadata;
 - manager and launcher values pinned to immutable `0.0.0-<short-sha>` image tags.
 
-The image workflow may continue publishing `dev-latest` for development tooling, but installing `main` does not depend on it. This closes the race where chart `0.0.0` and `dev-latest` could advance independently and makes manager/launcher identity observable.
+The image workflow may continue publishing `dev-latest` for development tooling, but installing `cms` does not depend on it. This closes the race where chart `0.0.0` and `dev-latest` could advance independently and makes manager/launcher identity observable.
 
-Alternative considered: treat `0.0.0` as latest. Rejected because it is rebuilt on every main merge and is intentionally less stable than a GitHub Release.
+Alternative considered: treat `0.0.0` as latest. Rejected because it is rebuilt on every cms merge and is intentionally less stable than a GitHub Release.
 
 Alternative considered: create prerelease GitHub Releases for commit builds. Rejected because the requested artifacts are explicitly unpublished and the existing OCI workflow already supplies the necessary distribution mechanism.
 
@@ -209,14 +209,14 @@ For local source, apply the checkout's `examples/basic/srl-multitool.yaml`.
 
 For supported published source, retrieve the demo from the immutable selected Git tag rather than from the checkout. The guaranteed published-demo support floor is `v0.6.0`, where the stable path exists. The release selector may list older releases, and `make install` may install an older exact chart after a successful OCI probe, but `make try-c9s` rejects releases below the demo support floor with an actionable message.
 
-For `main` and exact unpublished commit builds, the try workflow retrieves the demo from the full
+For `cms` and exact unpublished commit builds, the try workflow retrieves the demo from the full
 source revision embedded in the chart metadata. It fails before applying resources if the chart
 lacks source metadata or that revision's demo is unavailable. The existing-cluster install does not
 perform this metadata check.
 
 The demo manifest is stored in the try state directory before application. Readiness timeout dumps topology state, pods, events, and manager/launcher logs, then returns failure. The current soft-success behavior is removed.
 
-Alternative considered: maintain duplicate legacy demos on `main`. Rejected because a release-tagged demo is already version-coupled to its controller and avoids an expanding compatibility map.
+Alternative considered: maintain duplicate legacy demos on `cms`. Rejected because a release-tagged demo is already version-coupled to its controller and avoids an expanding compatibility map.
 
 ### 9. Give local builds immutable identities
 
@@ -292,7 +292,7 @@ KinD acceptance uses the same public Make targets and covers:
 - cleanup and uninstall;
 - poisoned host PATH to prove absolute pinned tools.
 
-Workflow tests and smoke checks cover the `Create dev release` feature-ref dispatch, mandatory lint/unit and optional e2e publication gates, exact commit images/chart, generated handoff commands, mutable main chart source metadata, main chart image pinning, and demo retrieval by source revision.
+Workflow tests and smoke checks cover the `Create dev release` feature-ref dispatch, mandatory lint/unit and optional e2e publication gates, exact commit images/chart, generated handoff commands, mutable cms chart source metadata, cms chart image pinning, and demo retrieval by source revision.
 
 CI provides linux/amd64 gating coverage and linux/arm64 smoke coverage without multiplying every selector across every platform. The release workflow adds an exact-version install smoke after images and charts are pushed; a failed smoke fails the release workflow even though the current GitHub release object may already be visible.
 
@@ -302,7 +302,7 @@ CI provides linux/amd64 gating coverage and linux/arm64 smoke coverage without m
 - **GitHub unauthenticated rate limiting** → Honor optional tokens, expose reset information, and allow explicit versions to proceed directly to the OCI probe.
 - **Historical chart or demo unavailable after repository moves** → Guarantee `try-c9s` only from `v0.6.0`, list older releases as historical, and validate the selected demo/artifact before cluster mutation.
 - **Successful workflow run but development artifact was removed or never pushed** → Treat Actions results as candidates and retain the exact OCI probe as the installation gate.
-- **Mutable main chart races with mutable images** → Pin each `0.0.0` chart publication to immutable `0.0.0-<short-sha>` manager/launcher tags and embed the full source SHA.
+- **Mutable cms chart races with mutable images** → Pin each `0.0.0` chart publication to immutable `0.0.0-<short-sha>` manager/launcher tags and embed the full source SHA.
 - **Feature branch moves after dispatch** → Build the resolved workflow SHA, embed it in chart metadata, and print it in the workflow summary and installer output.
 - **External registry is authenticated for push but not pullable by nodes** → Require explicit registry configuration and fail on rollout with image-pull diagnostics; document imagePullSecret requirements.
 - **In-cluster registry becomes a runtime dependency** → Keep it opt-in and include lifecycle/teardown documentation.
@@ -314,7 +314,7 @@ CI provides linux/amd64 gating coverage and linux/arm64 smoke coverage without m
 ## Migration Plan
 
 1. Add stable/development selection and fixture tests without changing existing targets.
-2. Separate routine CI from `Create dev release`, then harden manual and main development publication with source metadata, exact image pins, optional e2e gating, artifact probes, install smoke, and handoff output.
+2. Separate routine CI from `Create dev release`, then harden manual and cms development publication with source metadata, exact image pins, optional e2e gating, artifact probes, install smoke, and handoff output.
 3. Consolidate tool pins and local binary paths; prove e2e and existing developer workflows still use the intended versions.
 4. Introduce the shared install core and new `make install`.
 5. Migrate `try-c9s` to the shared core, release/source-revision demo selection, idempotent KinD handling, and hard readiness failure.

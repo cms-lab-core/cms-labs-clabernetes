@@ -22,6 +22,7 @@ type bootstrapConfig struct {
 	containerStopSignals    bool
 	imagePullPolicy         string
 	imagePullSecrets        []string
+	launcher                *clabernetesapisv1alpha1.ConfigLauncher
 	registryMetadataTrust   []clabernetesapisv1alpha1.RegistryMetadataTrustEntry
 	registryMetadataMirrors []clabernetesapisv1alpha1.RegistryMetadataMirrorEntry
 	rollout                 *clabernetesapisv1alpha1.ConfigRollout
@@ -122,6 +123,7 @@ func bootstrapFromConfigMap(
 		&bc.registryMetadataTrust, outErrors)
 	outErrors = unmarshalBootstrapKey(inMap, "registryMetadataMirrors",
 		&bc.registryMetadataMirrors, outErrors)
+	outErrors = unmarshalBootstrapKey(inMap, "launcher", &bc.launcher, outErrors)
 
 	var err error
 
@@ -225,6 +227,8 @@ func mergeFromBootstrapConfigMerge( //nolint:gocyclo
 		config.Spec.Deployment.ContainerStopSignals = bootstrap.containerStopSignals
 	}
 
+	mergeLauncher(bootstrap.launcher, &config.Spec.Deployment.Launcher)
+
 	if len(bootstrap.nodeSelectorsByImage) > 0 &&
 		config.Spec.Deployment.NodeSelectorsByImage == nil {
 		config.Spec.Deployment.NodeSelectorsByImage = make(
@@ -302,6 +306,33 @@ func mergeFromBootstrapConfigReplace(
 			ResourcesDefault:     bootstrap.resourcesDefault,
 			NodeSelectorsByImage: bootstrap.nodeSelectorsByImage,
 			ContainerStopSignals: bootstrap.containerStopSignals,
+			Launcher:             bootstrap.launcher,
 		},
+	}
+}
+
+// mergeLauncher fills only the launcher fields the config CR left unset: the CR's own values
+// always win, and an explicitly empty CR string is the CR's answer (the launcher is then resolved
+// from the manager environment instead).
+func mergeLauncher(
+	bootstrap *clabernetesapisv1alpha1.ConfigLauncher,
+	config **clabernetesapisv1alpha1.ConfigLauncher,
+) {
+	if bootstrap == nil {
+		return
+	}
+
+	if *config == nil {
+		*config = bootstrap.DeepCopy()
+
+		return
+	}
+
+	if (*config).Image == "" {
+		(*config).Image = bootstrap.Image
+	}
+
+	if (*config).ImagePullPolicy == "" {
+		(*config).ImagePullPolicy = bootstrap.ImagePullPolicy
 	}
 }

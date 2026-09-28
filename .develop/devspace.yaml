@@ -7,7 +7,7 @@ name: clabernetes
 vars:
   REGISTRY:
     source: env
-    default: ghcr.io/clabernetes/clabernetes
+    default: ghcr.io/maintainer64/cms-labs-clabernetes
 
   # The Makefile exports the pinned kubectl it downloads; standalone devspace runs fall back to
   # whatever is on PATH.

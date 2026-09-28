@@ -4,7 +4,7 @@ name: cicd
 on:
   push:
     branches:
-      - main
+      - cms
   pull_request: {}
 
 permissions:
@@ -43,5 +43,5 @@ jobs:
       - e2e
     uses: ./.github/workflows/publish-dev.yaml
     with:
-      channel: main
+      channel: cms
     secrets: inherit

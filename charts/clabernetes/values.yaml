@@ -28,7 +28,7 @@ manager:
   podLabels: {}
 
   # defaults to .Chart.Version, if 0.0.0 version defaults to 'dev-latest' tag
-  image: "" # ghcr.io/clabernetes/clabernetes/clabernetes-manager:{{ .Chart.Version }}
+  image: "" # ghcr.io/maintainer64/cms-labs-clabernetes/clabernetes-manager:{{ .Chart.Version }}
   imagePullPolicy: IfNotPresent
 
   replicaCount: 3
@@ -162,6 +162,17 @@ globalConfig:
     # When false, images that declare a stop signal fail planning rather than silently dropping
     # the signal.
     containerStopSignals: false
+
+    # launcher is the per-node helper image direct device Pods carry for what the distroless
+    # manager image cannot do itself -- currently the ttyd/tmux web terminal a node opts into with
+    # the containerlab "ttyd-shell" field. Nothing pulls this image unless a node asks for a
+    # web terminal.
+    launcher:
+      # image defaults to .Chart.Version, if 0.0.0 version defaults to 'dev-latest' tag
+      image: "" # ghcr.io/maintainer64/cms-labs-clabernetes/clabernetes-launcher:{{ .Chart.Version }}
+      # imagePullPolicy applies to the launcher image; an empty value reuses each device image's
+      # resolved pull policy.
+      imagePullPolicy: IfNotPresent
 
 #
 # clicker

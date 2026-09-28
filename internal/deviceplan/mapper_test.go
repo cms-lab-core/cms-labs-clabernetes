@@ -1079,3 +1079,30 @@ func containsArtifactKind(
 
 	return false
 }
+
+// TestPlanRejectsClabernetesOwnedNodeVocabulary documents the contract on the other side of the
+// boundary: the planner decodes a node definition strictly into the imported containerlab type,
+// so the fields clabernetes owns must never arrive here. The controller strips them while
+// compiling the plan input; a definition that still carries one is a bug, not a lab to plan.
+func TestPlanRejectsClabernetesOwnedNodeVocabulary(t *testing.T) {
+	t.Parallel()
+
+	for _, field := range []string{"launcher-image", "ttyd-shell"} {
+		input := richSyntheticInput(t)
+		input.Nodes[0].Definition = mustJSON(t, map[string]any{
+			"kind":  syntheticKind,
+			"type":  "vr-sros",
+			"image": "ghcr.io/srl-labs/vr-sros:23.10.R1",
+			field:   "example/c9s-launcher:debug",
+		})
+
+		adapter := clabernetesinternaldeviceplan.Adapter{
+			Registry: newSyntheticRegistry(t),
+			Revision: "c9s-owned-vocabulary-plan-v1",
+		}
+
+		if _, err := adapter.Plan(context.Background(), input); err == nil {
+			t.Fatalf("plan accepted the pod-level field %q", field)
+		}
+	}
+}

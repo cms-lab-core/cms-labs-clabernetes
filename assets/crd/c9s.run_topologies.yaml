@@ -177,6 +177,17 @@ spec:
                       in a device pod that the file should be staged at. This is useful for configs that are
                       larger than the ConfigMap (etcd) 1Mb size limit.
                     type: object
+                  launcher:
+                    description: |-
+                      Launcher overrides the cluster-wide launcher image for every node of this topology. An
+                      empty image leaves the Config/manager default in place; a node's own containerlab
+                      launcher-image field overrides this in turn.
+                    properties:
+                      image:
+                        description: Image is the launcher image, including any tag
+                          or digest.
+                        type: string
+                    type: object
                   persistence:
                     description: Persistence holds direct device artifact persistence
                       policy.

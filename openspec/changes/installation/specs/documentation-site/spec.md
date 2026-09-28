@@ -2,7 +2,7 @@
 
 ### Requirement: Structured repository-owned documentation
 
-The site SHALL render repository-owned Markdown or MDX as navigable documentation with a landing page, disposable local quickstart, existing-cluster installation guide, architecture and core concepts, guides, examples, and a CRD reference section. The installation documentation SHALL cover latest and exact stable releases, mutable main, exact unpublished commit builds, interactive selection, and local-checkout source selection; Kubernetes context behavior; KinD and registry image transport; manager/launcher verification; API-group compatibility; troubleshooting; and scoped teardown. The contributor documentation SHALL explain how to dispatch and share an unpublished build from a feature ref and how main chart `0.0.0` differs from latest stable. Core-concept navigation in the Guide category SHALL present Node and Link as the primary API and SHALL describe Topology as a supported higher-level compatibility resource. CRD field schemas SHALL be presented in a separate CRD Reference documentation category rather than as hand-maintained field tables.
+The site SHALL render repository-owned Markdown or MDX as navigable documentation with a landing page, disposable local quickstart, existing-cluster installation guide, architecture and core concepts, guides, examples, and a CRD reference section. The installation documentation SHALL cover latest and exact stable releases, mutable cms, exact unpublished commit builds, interactive selection, and local-checkout source selection; Kubernetes context behavior; KinD and registry image transport; manager/launcher verification; API-group compatibility; troubleshooting; and scoped teardown. The contributor documentation SHALL explain how to dispatch and share an unpublished build from a feature ref and how cms chart `0.0.0` differs from latest stable. Core-concept navigation in the Guide category SHALL present Node and Link as the primary API and SHALL describe Topology as a supported higher-level compatibility resource. CRD field schemas SHALL be presented in a separate CRD Reference documentation category rather than as hand-maintained field tables.
 
 #### Scenario: Navigate the primary API documentation
 
@@ -22,7 +22,7 @@ The site SHALL render repository-owned Markdown or MDX as navigable documentatio
 #### Scenario: Install into an existing cluster
 
 - **WHEN** a reader already has a Kubernetes cluster
-- **THEN** the installation guide documents context selection and preflight, latest and exact releases, main and unpublished development builds, local images for KinD, registry requirements for non-KinD clusters, verification, and uninstall
+- **THEN** the installation guide documents context selection and preflight, latest and exact releases, cms and unpublished development builds, local images for KinD, registry requirements for non-KinD clusters, verification, and uninstall
 
 #### Scenario: List installable releases
 
@@ -34,10 +34,10 @@ The site SHALL render repository-owned Markdown or MDX as navigable documentatio
 - **WHEN** a contributor wants others to test a feature branch commit
 - **THEN** the contributor documentation explains the authorized manual dispatch, `0.0.0-<short-sha>` artifact identity, validation gates, workflow handoff commands, and absence of a GitHub Release
 
-#### Scenario: Choose main rather than latest
+#### Scenario: Choose cms rather than latest
 
-- **WHEN** a reader wants the latest successfully published main commit
-- **THEN** the documentation identifies chart `0.0.0` as mutable main, explains its pinned commit images and source revision, and distinguishes it from latest stable
+- **WHEN** a reader wants the latest successfully published cms commit
+- **THEN** the documentation identifies chart `0.0.0` as mutable cms, explains its pinned commit images and source revision, and distinguishes it from latest stable
 
 #### Scenario: Understand API-group incompatibility
 

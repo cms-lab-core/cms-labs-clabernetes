@@ -58,6 +58,24 @@ type NodeDefinition struct {
 	// container starts.
 	// +optional
 	StartupDelay uint `json:"startup-delay,omitempty" yaml:"startup-delay,omitempty"`
+	// LauncherImage pins the launcher image for this node only -- the helper image the direct
+	// Pod carries for the features the distroless manager image cannot provide itself. It
+	// overrides both the Topology's spec.deployment.launcher.image and the cluster-wide
+	// Config launcher image, and it exists so one node of a lab can be debugged against a
+	// locally built launcher while the rest of the lab stays on the released image.
+	// +optional
+	LauncherImage string `json:"launcher-image,omitempty" yaml:"launcher-image,omitempty"`
+	// TTYDShell enables the per-node web terminal for this node and names the shell that terminal
+	// runs. The terminal is served by a ttyd/tmux sidecar running in this device Pod's launcher
+	// image: the sidecar enters the device container's mount namespace and starts the named shell
+	// there, so a browser session works against the device itself while the device's own process
+	// keeps running. Name a shell that exists in the device image -- "bash", "sh", or "cli" -- or
+	// leave it empty for /bin/sh. It cannot be the literal "attach": a container runtime owns the
+	// pty behind the device console, so a sidecar cannot read it (expose the device's own console
+	// ports instead). Grouped nodes share one Pod and therefore one terminal port, so at most one
+	// member of a group may set this.
+	// +optional
+	TTYDShell string `json:"ttyd-shell,omitempty" yaml:"ttyd-shell,omitempty"`
 	// RestartPolicy is the container restart policy for the node. Only the values with a
 	// shared-Pod mapping are accepted -- a device container in a direct Pod always restarts
 	// with its Pod, so Docker's "no" and "on-failure" policies cannot be represented.

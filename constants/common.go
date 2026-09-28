@@ -35,6 +35,11 @@ const (
 	// an exec probe would start the runtime binary every second in every Pod.
 	ConnectivityReadinessPort = 14791
 
+	// WebTerminalPort is the TCP port the per-node web terminal (ttyd) serves in a device Pod's
+	// shared network namespace. 7681 is ttyd's own default and the port the launcher image has
+	// always used, so existing firewalld/NetworkPolicy rules and bookmarked URLs keep working.
+	WebTerminalPort = 7681
+
 	// TCP is... TCP.
 	TCP = "TCP"
 

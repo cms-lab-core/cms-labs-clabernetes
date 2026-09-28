@@ -145,6 +145,68 @@ func (t *Topology) GetNodeLicense(nodeName string) string {
 	return t.Defaults.License
 }
 
+// GetNodeLauncherImage returns the launcher image override declared for the given node, walking
+// the containerlab inheritance layers (node, group, kind, defaults) most specific first.
+func (t *Topology) GetNodeLauncherImage(nodeName string) string {
+	return t.firstNodeLayerString(nodeName, func(definition *NodeDefinition) string {
+		return definition.LauncherImage
+	})
+}
+
+// GetNodeTTYDShell returns the web-terminal shell declared for the given node, walking the
+// containerlab inheritance layers (node, group, kind, defaults) most specific first. An empty
+// result means the node has no web terminal.
+func (t *Topology) GetNodeTTYDShell(nodeName string) string {
+	return t.firstNodeLayerString(nodeName, func(definition *NodeDefinition) string {
+		return definition.TTYDShell
+	})
+}
+
+// firstNodeLayerString resolves one string field through the containerlab inheritance layers in
+// the order the imported package uses: the node itself, then its group, then its kind, then the
+// topology defaults. Fields c9s owns (rather than containerlab) are resolved here because the
+// imported Topology cannot carry them.
+func (t *Topology) firstNodeLayerString(
+	nodeName string,
+	get func(*NodeDefinition) string,
+) string {
+	if node := t.Nodes[nodeName]; node != nil {
+		if value := get(node); value != "" {
+			return value
+		}
+	}
+
+	if group := t.Groups[t.nodeGroupName(nodeName)]; group != nil {
+		if value := get(group); value != "" {
+			return value
+		}
+	}
+
+	containerlabKind, _ := t.GetNodeKindType(nodeName)
+
+	if kind := t.Kinds[containerlabKind]; kind != nil {
+		if value := get(kind); value != "" {
+			return value
+		}
+	}
+
+	if t.Defaults == nil {
+		return ""
+	}
+
+	return get(t.Defaults)
+}
+
+// nodeGroupName returns the group the given node belongs to, or empty when it belongs to none.
+func (t *Topology) nodeGroupName(nodeName string) string {
+	node := t.Nodes[nodeName]
+	if node == nil {
+		return ""
+	}
+
+	return node.Group
+}
+
 // LinkDefinition represents a link definition in the topology file.
 type LinkDefinition struct {
 	LinkConfig `yaml:",inline"`

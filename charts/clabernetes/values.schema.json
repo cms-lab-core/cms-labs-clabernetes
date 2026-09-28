@@ -178,6 +178,17 @@
             },
             "containerStopSignals": {
               "type": "boolean"
+            },
+            "launcher": {
+              "type": "object",
+              "properties": {
+                "image": {
+                  "type": "string"
+                },
+                "imagePullPolicy": {
+                  "type": "string"
+                }
+              }
             }
           }
         }

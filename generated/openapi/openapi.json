@@ -421,6 +421,28 @@
                                         "description": "ContainerStopSignals, when true, has the direct-pod renderer map an image's OCI stop signal\nto the Kubernetes lifecycle.stopSignal field; this requires the cluster (apiserver and\nkubelets) to enable the ContainerStopSignals feature gate. When false, images that declare a\nstop signal fail planning rather than silently dropping the signal.",
                                         "type": "boolean"
                                     },
+                                    "launcher": {
+                                        "description": "Launcher holds the launcher image settings: the helper image clabernetes adds to a device\nPod for the features the distroless manager image cannot provide itself -- currently the\nper-node web terminal. An empty image leaves the launcher unpinned here and defers to the\nmanager's own LAUNCHER_IMAGE environment (set from the chart's launcher.image value), so an\ninstall that never enables the web terminal needs no launcher at all.",
+                                        "properties": {
+                                            "image": {
+                                                "description": "Image is the launcher image, including any tag or digest. Empty means \"use the manager's\nenvironment default\" (the chart's launcher.image value).",
+                                                "type": "string"
+                                            },
+                                            "imagePullPolicy": {
+                                                "description": "ImagePullPolicy is the pull policy applied to the launcher image. When empty the device\nimage's resolved pull policy is used.",
+                                                "enum": [
+                                                    "always",
+                                                    "Always",
+                                                    "never",
+                                                    "Never",
+                                                    "ifnotpresent",
+                                                    "IfNotPresent"
+                                                ],
+                                                "type": "string"
+                                            }
+                                        },
+                                        "type": "object"
+                                    },
                                     "nodeSelectorsByImage": {
                                         "additionalProperties": {
                                             "additionalProperties": {
@@ -921,6 +943,16 @@
                             "deployment": {
                                 "description": "Deployment holds device workload settings.",
                                 "properties": {
+                                    "launcher": {
+                                        "description": "Launcher overrides the launcher image for every node this profile applies to. It is how a\nTopology's spec.deployment.launcher.image reaches a device Pod, and it overrides the\ncluster-wide Config launcher image; a node's own containerlab launcher-image field overrides\nit in turn.",
+                                        "properties": {
+                                            "image": {
+                                                "description": "Image is the launcher image, including any tag or digest.",
+                                                "type": "string"
+                                            }
+                                        },
+                                        "type": "object"
+                                    },
                                     "persistence": {
                                         "description": "Persistence enables persistence of the containerlab working directory.",
                                         "properties": {
@@ -2527,6 +2559,10 @@
                                 "description": "Kind is the containerlab kind of the node -- i.e. nokia_srlinux.",
                                 "type": "string"
                             },
+                            "launcher-image": {
+                                "description": "LauncherImage pins the launcher image for this node only -- the helper image the direct\nPod carries for the features the distroless manager image cannot provide itself. It\noverrides both the Topology's spec.deployment.launcher.image and the cluster-wide\nConfig launcher image, and it exists so one node of a lab can be debugged against a\nlocally built launcher while the rest of the lab stays on the released image.",
+                                "type": "string"
+                            },
                             "license": {
                                 "description": "License is the path to the license file for the node.",
                                 "type": "string"
@@ -2635,6 +2671,10 @@
                                 },
                                 "description": "Tmpfs holds tmpfs mounts for the node's container, keyed by destination path.",
                                 "type": "object"
+                            },
+                            "ttyd-shell": {
+                                "description": "TTYDShell enables the per-node web terminal for this node and names the shell that terminal\nruns. The terminal is served by a ttyd/tmux sidecar running in this device Pod's launcher\nimage: the sidecar enters the device container's mount namespace and starts the named shell\nthere, so a browser session works against the device itself while the device's own process\nkeeps running. Name a shell that exists in the device image -- \"bash\", \"sh\", or \"cli\" -- or\nleave it empty for /bin/sh. It cannot be the literal \"attach\": a container runtime owns the\npty behind the device console, so a sidecar cannot read it (expose the device's own console\nports instead). Grouped nodes share one Pod and therefore one terminal port, so at most one\nmember of a group may set this.",
+                                "type": "string"
                             },
                             "type": {
                                 "description": "Type is the type of the node -- i.e. ixrd2.",
@@ -3052,6 +3092,16 @@
                                             "type": "array"
                                         },
                                         "description": "FilesFromURL is a mapping of FileFromURL that define a URL at which to fetch a file, and path\nin a device pod that the file should be staged at. This is useful for configs that are\nlarger than the ConfigMap (etcd) 1Mb size limit.",
+                                        "type": "object"
+                                    },
+                                    "launcher": {
+                                        "description": "Launcher overrides the cluster-wide launcher image for every node of this topology. An\nempty image leaves the Config/manager default in place; a node's own containerlab\nlauncher-image field overrides this in turn.",
+                                        "properties": {
+                                            "image": {
+                                                "description": "Image is the launcher image, including any tag or digest.",
+                                                "type": "string"
+                                            }
+                                        },
                                         "type": "object"
                                     },
                                     "persistence": {

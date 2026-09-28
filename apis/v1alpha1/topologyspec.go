@@ -184,6 +184,21 @@ type Deployment struct {
 	// Persistence holds direct device artifact persistence policy.
 	// +optional
 	Persistence Persistence `json:"persistence"`
+	// Launcher overrides the cluster-wide launcher image for every node of this topology. An
+	// empty image leaves the Config/manager default in place; a node's own containerlab
+	// launcher-image field overrides this in turn.
+	// +optional
+	Launcher *TopologyLauncher `json:"launcher,omitempty"`
+}
+
+// TopologyLauncher holds the launcher image override compiled from a Topology. It is a plain image
+// reference: the pull policy stays a cluster concern (Config's launcher.imagePullPolicy, or the
+// device image's resolved policy when that is unset) so a topology cannot silently change how the
+// helper image is fetched.
+type TopologyLauncher struct {
+	// Image is the launcher image, including any tag or digest.
+	// +optional
+	Image string `json:"image,omitempty"`
 }
 
 // Scheduling holds direct Pod node selection and toleration policy.

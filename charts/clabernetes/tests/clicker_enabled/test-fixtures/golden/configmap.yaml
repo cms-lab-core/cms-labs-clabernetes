@@ -37,6 +37,10 @@ data:
     {}
     ---
   containerStopSignals: "false"
+  launcher: |-
+    ---
+    image: "ghcr.io/maintainer64/cms-labs-clabernetes/clabernetes-launcher:dev-latest"
+    imagePullPolicy: "IfNotPresent"
   imagePullPolicy: IfNotPresent
   imagePullSecrets: |-
     []

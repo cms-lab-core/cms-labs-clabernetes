@@ -87,8 +87,11 @@ e2e-cluster: e2e-tools ## Create the local e2e KinD cluster (idempotent)
 e2e-images: e2e-cluster ## Build clabernetes images locally and load them into the e2e cluster
 	@echo "--> E2E: building manager image tagged $(E2E_IMAGE_TAG)"
 	@$(MAKE) --no-print-directory build-manager IMAGE_TAG=$(E2E_IMAGE_TAG) C9S_LOCAL_BUILD_ID=$(C9S_LOCAL_BUILD_ID)
+	@echo "--> E2E: building launcher image tagged $(E2E_IMAGE_TAG)"
+	@$(MAKE) --no-print-directory build-launcher IMAGE_TAG=$(E2E_IMAGE_TAG) C9S_LOCAL_BUILD_ID=$(C9S_LOCAL_BUILD_ID)
 	@echo "--> E2E: loading images into KinD cluster $(E2E_CLUSTER_NAME)"
 	@$(E2E_KIND) load docker-image "$(MANAGER_IMAGE):$(E2E_IMAGE_TAG)" --name $(E2E_CLUSTER_NAME)
+	@$(E2E_KIND) load docker-image "$(LAUNCHER_IMAGE):$(E2E_IMAGE_TAG)" --name $(E2E_CLUSTER_NAME)
 
 .PHONY: e2e-deploy
 e2e-deploy: e2e-images ## Install the local clabernetes chart using the locally built images
@@ -98,6 +101,8 @@ e2e-deploy: e2e-images ## Install the local clabernetes chart using the locally 
 		--create-namespace \
 		--set manager.image=$(MANAGER_IMAGE):$(E2E_IMAGE_TAG) \
 		--set manager.imagePullPolicy=IfNotPresent \
+		--set globalConfig.deployment.launcher.image=$(LAUNCHER_IMAGE):$(E2E_IMAGE_TAG) \
+		--set globalConfig.deployment.launcher.imagePullPolicy=IfNotPresent \
 		--set manager.replicaCount=1 \
 		--set manager.managerLogLevel=debug \
 		--set manager.controllerLogLevel=debug

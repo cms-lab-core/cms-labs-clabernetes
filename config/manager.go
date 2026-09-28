@@ -122,6 +122,14 @@ type Manager interface { //nolint: interfacebloat
 	// stop signal to the Kubernetes lifecycle.stopSignal field -- this requires the cluster to
 	// enable the ContainerStopSignals feature gate.
 	GetContainerStopSignals() bool
+	// GetLauncherImage returns the cluster-wide launcher image -- the helper image direct device
+	// Pods carry for what the distroless manager image cannot do itself (currently the per-node web
+	// terminal). An empty string means the config leaves the launcher unpinned and the manager's
+	// environment (the chart's launcher.image) is the fallback.
+	GetLauncherImage() string
+	// GetLauncherImagePullPolicy returns the pull policy for the launcher image; an empty string
+	// means "use the device image's resolved pull policy".
+	GetLauncherImagePullPolicy() string
 	// GetRolloutBatchSize returns the installation-wide startup batch limit (zero disables it).
 	GetRolloutBatchSize() int32
 	// GetRolloutMaxConcurrentPerHost returns the installation-wide per-host boot limit.

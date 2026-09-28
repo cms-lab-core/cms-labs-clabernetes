@@ -292,6 +292,13 @@ func renderTopologyNodeProfile(
 		deployment.Persistence = topology.Spec.Deployment.Persistence.DeepCopy()
 	}
 
+	if topology.Spec.Deployment.Launcher != nil &&
+		topology.Spec.Deployment.Launcher.Image != "" {
+		deployment.Launcher = &clabernetesapisv1alpha1.NodeProfileLauncher{
+			Image: topology.Spec.Deployment.Launcher.Image,
+		}
+	}
+
 	if !reflectValueIsZero(deployment) {
 		spec.Deployment = deployment
 	}
@@ -368,7 +375,7 @@ func imagePullIsZero(imagePull *clabernetesapisv1alpha1.NodeProfileImagePull) bo
 }
 
 func deploymentIsZero(deployment *clabernetesapisv1alpha1.NodeProfileDeployment) bool {
-	return deployment.Persistence == nil
+	return deployment.Persistence == nil && deployment.Launcher == nil
 }
 
 // compiledStatusProbes copies the Topology's probe policy with every node name it holds mapped

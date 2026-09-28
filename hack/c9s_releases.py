@@ -30,8 +30,8 @@ from rich.table import Table  # ty: ignore[unresolved-import]
 app = typer.Typer(add_completion=False, no_args_is_help=True)
 stderr = Console(stderr=True)
 
-DEFAULT_REPOSITORY = "clabernetes/clabernetes"
-CHART_REFERENCE = "oci://ghcr.io/clabernetes/clabernetes/clabernetes"
+DEFAULT_REPOSITORY = "maintainer64/cms-labs-clabernetes"
+CHART_REFERENCE = "oci://ghcr.io/maintainer64/cms-labs-clabernetes/clabernetes"
 STABLE_VERSION = re.compile(r"^v?(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$")
 DEVELOPMENT_VERSION = re.compile(r"^0\.0\.0-[0-9a-f]{7,40}$")
 GH_PATH_OPTION = typer.Option(..., exists=True, dir_okay=False)
@@ -120,7 +120,7 @@ def normalize_version(value: str) -> str:
     if STABLE_VERSION.fullmatch(value) or DEVELOPMENT_VERSION.fullmatch(value):
         return value.removeprefix("v")
     _fail(
-        f"invalid c9s version {value!r}; expected latest, main, local, select, "
+        f"invalid c9s version {value!r}; expected latest, cms, local, select, "
         "X.Y.Z, vX.Y.Z, or 0.0.0-<short-sha>"
     )
 
@@ -198,18 +198,18 @@ def _development_builds(
     return sorted(builds, key=lambda item: item.completed_at, reverse=True)
 
 
-def _main_build(gh: Path, repository: str) -> Release | None:
+def _cms_build(gh: Path, repository: str) -> Release | None:
     payload = _gh_json(
         gh,
         f"repos/{repository}/actions/workflows/cicd.yaml/runs"
-        "?branch=main&event=push&status=completed&per_page=100",
+        "?branch=cms&event=push&status=completed&per_page=100",
     )
     runs = _flatten_pages(payload, key="workflow_runs")
     successful = [
         run
         for run in runs
         if run.get("conclusion") == "success"
-        and run.get("head_branch") == "main"
+        and run.get("head_branch") == "cms"
         and isinstance(run.get("updated_at"), str)
     ]
     if not successful:
@@ -218,12 +218,12 @@ def _main_build(gh: Path, repository: str) -> Release | None:
         successful, key=lambda item: _parse_timestamp(item["updated_at"], "updated_at")
     )
     return Release(
-        tag="main",
+        tag="cms",
         version="0.0.0",
         published_at=_parse_timestamp(run["updated_at"], "updated_at"),
         prerelease=True,
         url=str(run.get("html_url", "")),
-        channel="main",
+        channel="cms",
     )
 
 
@@ -341,9 +341,9 @@ def list_releases(
         "[bold cyan]Fetching releases and checking OCI charts...", spinner="dots"
     ) as status:
         candidates = _releases(gh, repository)
-        main = _main_build(gh, repository)
-        if main is not None:
-            candidates.append(main)
+        cms = _cms_build(gh, repository)
+        if cms is not None:
+            candidates.append(cms)
         candidates.extend(_development_releases(_development_builds(gh, repository)))
         candidates.sort(key=lambda release: release.published_at, reverse=True)
         status.update("[bold cyan]Checking OCI chart availability...")
@@ -373,7 +373,7 @@ def resolve(
     repository: str = REPOSITORY_OPTION,
 ) -> None:
     """Resolve a selector to a value consumed by Make."""
-    if value in {"main", "local"}:
+    if value in {"cms", "local"}:
         print(value)
     elif value == "latest":
         print(_latest(gh, repository).version)
@@ -393,7 +393,7 @@ def source(
     if value == "latest":
         print(_latest(gh, repository).tag)
         return
-    if value in {"main", "local", "select"}:
+    if value in {"cms", "local", "select"}:
         _fail(f"{value} does not identify an immutable published Git tag")
     version = normalize_version(value)
     for release in _releases(gh, repository):
@@ -412,7 +412,7 @@ def select(
     """Interactively select a stable or development artifact."""
     if not sys.stdin.isatty():
         _fail(
-            "interactive selection requires a terminal; use latest, main, or an exact version"
+            "interactive selection requires a terminal; use latest, cms, or an exact version"
         )
     releases = [
         release
@@ -424,7 +424,7 @@ def select(
         for build in _development_builds(gh, repository)
         if _chart_available(helm, build.version)
     ]
-    options = [("main", "main", "0.0.0", "mutable main", "moving", "")]
+    options = [("cms", "cms", "0.0.0", "mutable CMS", "moving", "")]
     options.extend(
         (
             release.version,

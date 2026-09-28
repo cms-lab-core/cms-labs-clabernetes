@@ -15,7 +15,7 @@ image from the directory that holds the topology:
 
 ```bash
 docker run --rm -v "$(pwd)":/clabernetes/work \
-  ghcr.io/clabernetes/clabernetes/clabverter:latest --stdout
+  ghcr.io/maintainer64/cms-labs-clabernetes/clabverter:latest --stdout
 ```
 
 ## Convert

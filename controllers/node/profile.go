@@ -33,6 +33,10 @@ type ResolvedProfile struct {
 	Tolerations  []k8scorev1.Toleration
 	Affinity     *k8scorev1.Affinity
 
+	// launcher helper image (empty means the manager's environment default)
+	LauncherImage           string
+	LauncherImagePullPolicy string
+
 	// direct workload persistence settings
 	Persistence clabernetesapisv1alpha1.Persistence
 
@@ -52,9 +56,11 @@ func ResolveProfile(
 	configManager := configManagerGetter()
 
 	resolved := &ResolvedProfile{
-		ExposeType:      "LoadBalancer",
-		ImagePullPolicy: configManager.GetApplicationImagePullPolicy(),
-		PullSecrets:     configManager.GetImagePullSecrets(),
+		ExposeType:              "LoadBalancer",
+		ImagePullPolicy:         configManager.GetApplicationImagePullPolicy(),
+		PullSecrets:             configManager.GetImagePullSecrets(),
+		LauncherImage:           configManager.GetLauncherImage(),
+		LauncherImagePullPolicy: configManager.GetLauncherImagePullPolicy(),
 	}
 
 	if profile == nil {
@@ -161,5 +167,9 @@ func applyProfileDeployment(
 
 	if deployment.Persistence != nil {
 		resolved.Persistence = *deployment.Persistence.DeepCopy()
+	}
+
+	if deployment.Launcher != nil && deployment.Launcher.Image != "" {
+		resolved.LauncherImage = deployment.Launcher.Image
 	}
 }

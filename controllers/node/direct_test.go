@@ -1650,6 +1650,7 @@ func TestCompileDirectExposedPortsKeepsAutoExposeParity(t *testing.T) {
 		&ResolvedProfile{},
 		[]string{node.GetName()},
 		map[string]*clabernetesapisv1alpha1.Node{node.GetName(): node},
+		nil,
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -1697,6 +1698,7 @@ func TestCompileDirectExposedPortsKeepsAutoExposeParity(t *testing.T) {
 		&ResolvedProfile{DisableAutoExpose: true},
 		[]string{node.GetName()},
 		map[string]*clabernetesapisv1alpha1.Node{node.GetName(): node},
+		nil,
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -1715,6 +1717,7 @@ func TestCompileDirectExposedPortsKeepsAutoExposeParity(t *testing.T) {
 		&ResolvedProfile{DisableAutoExpose: true, ExposeType: "ClusterIP"},
 		[]string{node.GetName()},
 		map[string]*clabernetesapisv1alpha1.Node{node.GetName(): node},
+		nil,
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -1772,6 +1775,7 @@ func TestCompileDirectExposedPortsRejectsGroupedNamespaceCollision(t *testing.T)
 		map[string]*clabernetesapisv1alpha1.Node{
 			first.GetName(): first, second.GetName(): second,
 		},
+		nil,
 	)
 
 	var planningErr *clabernetesinternaldeviceplan.Error
@@ -1810,6 +1814,7 @@ func TestCompileDirectExposedPortsGroupedImagePortsFirstMemberWins(t *testing.T)
 		map[string]*clabernetesapisv1alpha1.Node{
 			first.GetName(): first, second.GetName(): second,
 		},
+		nil,
 	)
 	if err != nil {
 		t.Fatalf("compileDirectExposedPorts() error = %v, want first member to claim the port", err)
@@ -1847,6 +1852,7 @@ func TestCompileDirectExposedPortsExplicitPortDisplacesImplicitOwner(t *testing.
 		map[string]*clabernetesapisv1alpha1.Node{
 			first.GetName(): first, second.GetName(): second,
 		},
+		nil,
 	)
 	if err != nil {
 		t.Fatalf(
@@ -2416,5 +2422,167 @@ func TestDirectPlanRejectionForUndeclaredSensitiveValueIsReportedOnNode(t *testi
 			strings.Contains(event, "sensitive value") && !strings.Contains(event, "sha256")
 	}) {
 		t.Fatalf("direct preflight events = %#v", events)
+	}
+}
+
+// TestCompileDirectExposedPortsPublishesTheWebTerminal is why the terminal is wired through the
+// exposed-port status at all: the per-Node Service is built from that status, so a terminal that
+// is not listed there is unreachable from a browser.
+func TestCompileDirectExposedPortsPublishesTheWebTerminal(t *testing.T) {
+	node := planInputTestNode("future-a", "uid-future-a", "opaque-package-kind", "example/device:1")
+	plan := clabernetesinternaldeviceplan.Plan{
+		Containers: []clabernetesinternaldeviceplan.ContainerPlan{{
+			ID: "container-a", NodeID: string(node.GetUID()),
+			Ports: []clabernetesinternaldeviceplan.Port{{Number: 22, Protocol: "TCP"}},
+		}},
+	}
+
+	ports, err := compileDirectExposedPorts(
+		plan,
+		&ResolvedProfile{DisableAutoExpose: true},
+		[]string{node.GetName()},
+		map[string]*clabernetesapisv1alpha1.Node{node.GetName(): node},
+		map[string]clabernetesinternaldirectpod.WebTerminal{
+			string(node.GetUID()): {Shell: "bash"},
+		},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	terminalPort := clabernetesapisv1alpha1.NodeExposedPort{
+		DestinationPort: clabernetesconstants.WebTerminalPort,
+		ExposePort:      clabernetesconstants.WebTerminalPort,
+		Protocol:        "TCP",
+	}
+
+	if !slices.Contains(ports[node.GetName()].Ports, terminalPort) {
+		t.Fatalf(
+			"direct exposed ports = %#v, want the web terminal port %d",
+			ports[node.GetName()].Ports,
+			clabernetesconstants.WebTerminalPort,
+		)
+	}
+}
+
+// TestCompileDirectExposedPortsReusesATerminalOverTheOwnDevicePort keeps the port inventory
+// honest when the device image already advertises the terminal port: the sidecar binds it, so the
+// Node exposes it once rather than carrying a duplicate entry.
+func TestCompileDirectExposedPortsReusesATerminalOverTheOwnDevicePort(t *testing.T) {
+	node := planInputTestNode("future-a", "uid-future-a", "opaque-package-kind", "example/device:1")
+	plan := clabernetesinternaldeviceplan.Plan{
+		Containers: []clabernetesinternaldeviceplan.ContainerPlan{{
+			ID: "container-a", NodeID: string(node.GetUID()),
+			Ports: []clabernetesinternaldeviceplan.Port{{
+				Number: clabernetesconstants.WebTerminalPort, Protocol: "TCP",
+			}},
+		}},
+	}
+
+	ports, err := compileDirectExposedPorts(
+		plan,
+		&ResolvedProfile{DisableAutoExpose: true},
+		[]string{node.GetName()},
+		map[string]*clabernetesapisv1alpha1.Node{node.GetName(): node},
+		map[string]clabernetesinternaldirectpod.WebTerminal{
+			string(node.GetUID()): {Shell: "bash"},
+		},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	published := 0
+	for _, port := range ports[node.GetName()].Ports {
+		if port.DestinationPort == clabernetesconstants.WebTerminalPort {
+			published++
+		}
+	}
+
+	if published != 1 {
+		t.Fatalf(
+			"web terminal port published %d times in %#v", published, ports[node.GetName()].Ports,
+		)
+	}
+}
+
+// TestCompileDirectExposedPortsRejectsATerminalOverAnotherNodesPort covers the collision the
+// sidecar cannot survive: ttyd binds the shared Pod network namespace, so another member already
+// holding 7681 has to be a reconciliation failure rather than a terminal that never answers.
+func TestCompileDirectExposedPortsRejectsATerminalOverAnotherNodesPort(t *testing.T) {
+	first := planInputTestNode(
+		"future-a",
+		"uid-future-a",
+		"opaque-package-kind",
+		"example/device:1",
+	)
+	second := planInputTestNode(
+		"future-b",
+		"uid-future-b",
+		"opaque-package-kind",
+		"example/device:1",
+	)
+	plan := clabernetesinternaldeviceplan.Plan{
+		Containers: []clabernetesinternaldeviceplan.ContainerPlan{
+			{ID: "container-a", NodeID: string(first.GetUID())},
+			{
+				ID: "container-b", NodeID: string(second.GetUID()),
+				Ports: []clabernetesinternaldeviceplan.Port{{
+					Number: clabernetesconstants.WebTerminalPort, Protocol: "TCP",
+				}},
+			},
+		},
+	}
+
+	_, err := compileDirectExposedPorts(
+		plan,
+		&ResolvedProfile{DisableAutoExpose: true},
+		[]string{first.GetName(), second.GetName()},
+		map[string]*clabernetesapisv1alpha1.Node{
+			first.GetName(): first, second.GetName(): second,
+		},
+		map[string]clabernetesinternaldirectpod.WebTerminal{
+			string(first.GetUID()): {Shell: "bash"},
+		},
+	)
+	if err == nil {
+		t.Fatal("a terminal rendered over another node's port instead of being rejected")
+	}
+}
+
+func TestCompileDirectExposedPortsRejectsTwoGroupedTerminals(t *testing.T) {
+	first := planInputTestNode(
+		"future-a",
+		"uid-future-a",
+		"opaque-package-kind",
+		"example/device:1",
+	)
+	second := planInputTestNode(
+		"future-b",
+		"uid-future-b",
+		"opaque-package-kind",
+		"example/device:1",
+	)
+	plan := clabernetesinternaldeviceplan.Plan{
+		Containers: []clabernetesinternaldeviceplan.ContainerPlan{
+			{ID: "container-a", NodeID: string(first.GetUID())},
+			{ID: "container-b", NodeID: string(second.GetUID())},
+		},
+	}
+
+	_, err := compileDirectExposedPorts(
+		plan,
+		&ResolvedProfile{DisableAutoExpose: true},
+		[]string{first.GetName(), second.GetName()},
+		map[string]*clabernetesapisv1alpha1.Node{
+			first.GetName(): first, second.GetName(): second,
+		},
+		map[string]clabernetesinternaldirectpod.WebTerminal{
+			string(first.GetUID()):  {Shell: "bash"},
+			string(second.GetUID()): {Shell: "sh"},
+		},
+	)
+	if err == nil {
+		t.Fatal("two grouped terminals reconciled instead of being rejected")
 	}
 }
