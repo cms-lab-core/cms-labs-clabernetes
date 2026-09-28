@@ -267,7 +267,7 @@ func TestCompilePlanInputKeepsPodOwnedNodeFieldsOutOfThePlan(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	for _, field := range podOwnedNodeFields {
+	for _, field := range podOwnedNodeFields() {
 		if strings.Contains(string(input.Nodes[0].Definition), field) {
 			t.Fatalf(
 				"plan input definition carries pod-owned field %q: %s",

@@ -118,13 +118,15 @@ func CompilePlanInput(request PlanInputCompileRequest) (clabernetesinternaldevic
 	return clabernetesinternaldeviceplan.NormalizeInput(input)
 }
 
-// podOwnedNodeFields are the node definition fields clabernetes owns: the per-node launcher image
-// and the web terminal request. Both are Pod-level inputs -- the renderer resolves them into the
-// device Pod's terminal sidecar -- and the planner decodes a node definition strictly into the
+// podOwnedNodeFields returns the node definition fields clabernetes owns: the per-node launcher
+// image and the web terminal request. Both are Pod-level inputs -- the renderer resolves them into
+// the device Pod's terminal sidecar -- and the planner decodes a node definition strictly into the
 // imported containerlab type, which knows neither field. They are therefore dropped here rather
 // than smuggled into the plan: the device runtime has no use for them, and keeping them out also
 // keeps a repointed launcher tag from changing the plan digest for every node.
-var podOwnedNodeFields = []string{"launcher-image", "ttyd-shell"}
+func podOwnedNodeFields() []string {
+	return []string{"launcher-image", "ttyd-shell"}
+}
 
 // marshalNodeDefinition serializes a node definition for the plan input in imported-containerlab
 // vocabulary. The values themselves are copied as raw json, so nothing is re-typed on the way
@@ -150,7 +152,7 @@ func marshalNodeDefinition(
 		)
 	}
 
-	for _, field := range podOwnedNodeFields {
+	for _, field := range podOwnedNodeFields() {
 		delete(fields, field)
 	}
 

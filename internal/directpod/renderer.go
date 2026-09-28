@@ -2842,7 +2842,7 @@ func renderWebTerminal(
 	plan clabernetesinternaldeviceplan.Plan,
 ) (*k8scorev1.Container, error) {
 	if len(options.WebTerminals) == 0 {
-		return nil, nil
+		return nil, errors.New("rendering a web terminal without a terminal request")
 	}
 
 	if len(options.WebTerminals) > 1 {

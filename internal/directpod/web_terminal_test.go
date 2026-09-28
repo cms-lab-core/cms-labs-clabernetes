@@ -40,6 +40,91 @@ func webTerminalSidecar(
 	return nil
 }
 
+func assertWebTerminalSidecar(
+	t *testing.T,
+	sidecar *k8scorev1.Container,
+	options clabernetesinternaldirectpod.Options,
+) {
+	t.Helper()
+
+	if sidecar.Image != options.LauncherImage {
+		t.Fatalf("sidecar image = %q, want %q", sidecar.Image, options.LauncherImage)
+	}
+	if sidecar.ImagePullPolicy != k8scorev1.PullAlways {
+		t.Fatalf("sidecar pull policy = %q, want Always", sidecar.ImagePullPolicy)
+	}
+	if sidecar.RestartPolicy == nil ||
+		*sidecar.RestartPolicy != k8scorev1.ContainerRestartPolicyAlways {
+		t.Fatal("sidecar is not a restartable native sidecar")
+	}
+	if sidecar.SecurityContext == nil ||
+		sidecar.SecurityContext.Privileged == nil ||
+		!*sidecar.SecurityContext.Privileged {
+		t.Fatal("sidecar is not privileged, so it cannot enter the device namespaces")
+	}
+	if len(sidecar.Ports) != 1 ||
+		sidecar.Ports[0].ContainerPort != clabernetesconstants.WebTerminalPort {
+		t.Fatalf("sidecar ports = %v, want the web terminal port", sidecar.Ports)
+	}
+
+	command := strings.Join(sidecar.Command, " ")
+	for _, fragment := range []string{
+		"ttyd", "7681", "tmux", "clabernetes", "terminal", "--processIDFile", "node-a.pid",
+		"--shell", "bash",
+	} {
+		if !strings.Contains(command, fragment) {
+			t.Fatalf("sidecar command %q lacks %q", command, fragment)
+		}
+	}
+}
+
+func assertWebTerminalRuntimeVolume(
+	t *testing.T,
+	spec k8scorev1.PodSpec,
+	sidecar *k8scorev1.Container,
+) {
+	t.Helper()
+
+	if !slices.ContainsFunc(spec.Volumes, func(volume k8scorev1.Volume) bool {
+		return volume.Name == "node-web-terminal" && volume.EmptyDir != nil
+	}) {
+		t.Fatal("terminal runtime volume is missing")
+	}
+
+	if !slices.ContainsFunc(sidecar.VolumeMounts, func(mount k8scorev1.VolumeMount) bool {
+		return mount.Name == "node-web-terminal"
+	}) {
+		t.Fatal("sidecar does not mount the terminal runtime volume")
+	}
+}
+
+func assertWebTerminalProcessPublication(t *testing.T, spec k8scorev1.PodSpec) {
+	t.Helper()
+
+	root := containerByImage(
+		t,
+		spec.Containers,
+		"example/device@sha256:"+strings.Repeat("a", 64),
+	)
+	if !slices.Contains(root.Command, "--processIDFile") {
+		t.Fatalf("device container command %v does not publish its process id", root.Command)
+	}
+	if !slices.ContainsFunc(root.VolumeMounts, func(mount k8scorev1.VolumeMount) bool {
+		return mount.Name == "node-web-terminal"
+	}) {
+		t.Fatal("device container does not mount the terminal runtime volume")
+	}
+
+	component := containerByImage(
+		t,
+		spec.Containers,
+		"example/component@sha256:"+strings.Repeat("b", 64),
+	)
+	if slices.Contains(component.Command, "--processIDFile") {
+		t.Fatalf("non-primary container command %v publishes a process id", component.Command)
+	}
+}
+
 // TestRenderAddsWebTerminalSidecarForATerminalNode covers the whole terminal surface: the sidecar
 // itself, the shared PID namespace it needs to see the device process, the runtime volume the
 // device publishes its process id into, and the launch flag that publishes it.
@@ -63,79 +148,9 @@ func TestRenderAddsWebTerminalSidecarForATerminalNode(t *testing.T) {
 	}
 
 	sidecar := webTerminalSidecar(t, spec)
-	if sidecar.Image != options.LauncherImage {
-		t.Fatalf("sidecar image = %q, want %q", sidecar.Image, options.LauncherImage)
-	}
-	if sidecar.ImagePullPolicy != k8scorev1.PullAlways {
-		t.Fatalf("sidecar pull policy = %q, want Always", sidecar.ImagePullPolicy)
-	}
-	if sidecar.RestartPolicy == nil ||
-		*sidecar.RestartPolicy != k8scorev1.ContainerRestartPolicyAlways {
-		t.Fatal("sidecar is not a restartable native sidecar")
-	}
-	if sidecar.SecurityContext == nil ||
-		sidecar.SecurityContext.Privileged == nil ||
-		!*sidecar.SecurityContext.Privileged {
-		t.Fatal("sidecar is not privileged, so it cannot enter the device namespaces")
-	}
-	if len(sidecar.Ports) != 1 ||
-		sidecar.Ports[0].ContainerPort != clabernetesconstants.WebTerminalPort {
-		t.Fatalf("sidecar ports = %v, want the web terminal port", sidecar.Ports)
-	}
-
-	// The sidecar runs the c9s binary in terminal mode, not a shell of its own: the session has to
-	// land inside the device container's mount namespace.
-	command := strings.Join(sidecar.Command, " ")
-	for _, fragment := range []string{
-		"ttyd", "7681", "tmux", "clabernetes", "terminal", "--processIDFile", "node-a.pid",
-		"--shell", "bash",
-	} {
-		if !strings.Contains(command, fragment) {
-			t.Fatalf("sidecar command %q lacks %q", command, fragment)
-		}
-	}
-
-	if !slices.ContainsFunc(spec.Volumes, func(volume k8scorev1.Volume) bool {
-		return volume.Name == "node-web-terminal" && volume.EmptyDir != nil
-	}) {
-		t.Fatal("terminal runtime volume is missing")
-	}
-
-	if !slices.ContainsFunc(sidecar.VolumeMounts, func(mount k8scorev1.VolumeMount) bool {
-		return mount.Name == "node-web-terminal"
-	}) {
-		t.Fatal("sidecar does not mount the terminal runtime volume")
-	}
-
-	root := containerByImage(
-		t,
-		spec.Containers,
-		"example/device@sha256:"+strings.Repeat("a", 64),
-	)
-	if !slices.ContainsFunc(root.Command, func(argument string) bool {
-		return argument == "--processIDFile"
-	}) {
-		t.Fatalf("device container command %v does not publish its process id", root.Command)
-	}
-	if !slices.ContainsFunc(root.VolumeMounts, func(mount k8scorev1.VolumeMount) bool {
-		return mount.Name == "node-web-terminal"
-	}) {
-		t.Fatal("device container does not mount the terminal runtime volume")
-	}
-
-	// Only the Node's primary container publishes a process id. A kind with several containers
-	// would otherwise race for one file, and a session could enter a side process of the device
-	// rather than the device itself.
-	component := containerByImage(
-		t,
-		spec.Containers,
-		"example/component@sha256:"+strings.Repeat("b", 64),
-	)
-	if slices.ContainsFunc(component.Command, func(argument string) bool {
-		return argument == "--processIDFile"
-	}) {
-		t.Fatalf("non-primary container command %v publishes a process id", component.Command)
-	}
+	assertWebTerminalSidecar(t, sidecar, options)
+	assertWebTerminalRuntimeVolume(t, spec, sidecar)
+	assertWebTerminalProcessPublication(t, spec)
 }
 
 // TestRenderLeavesWorkloadsWithoutTerminalsAlone is the negative half: a lab that asks for no

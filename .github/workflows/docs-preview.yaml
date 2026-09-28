@@ -25,6 +25,9 @@ jobs:
   preview:
     if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-24.04
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
     steps:
       - name: checkout
         uses: actions/checkout@v7
@@ -55,11 +58,12 @@ jobs:
         run: make build-docs
 
       - name: upload preview version
+        if: env.CLOUDFLARE_API_TOKEN != '' && env.CLOUDFLARE_ACCOUNT_ID != ''
         id: deploy
         uses: cloudflare/wrangler-action@v4
         with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          apiToken: ${{ env.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ env.CLOUDFLARE_ACCOUNT_ID }}
           wranglerVersion: "4"
           command: >-
             versions upload
@@ -67,6 +71,7 @@ jobs:
             --message "docs preview for PR #${{ github.event.pull_request.number }} (${{ github.sha }})"
 
       - name: extract preview urls
+        if: env.CLOUDFLARE_API_TOKEN != '' && env.CLOUDFLARE_ACCOUNT_ID != ''
         id: urls
         env:
           COMMAND_OUTPUT: ${{ steps.deploy.outputs.command-output }}
@@ -85,6 +90,7 @@ jobs:
           echo "short_sha=${HEAD_SHA:0:7}" >> "$GITHUB_OUTPUT"
 
       - name: update pull request comment
+        if: env.CLOUDFLARE_API_TOKEN != '' && env.CLOUDFLARE_ACCOUNT_ID != ''
         uses: peter-evans/create-or-update-comment@v5
         with:
           issue-number: ${{ github.event.pull_request.number }}

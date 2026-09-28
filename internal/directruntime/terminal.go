@@ -26,6 +26,8 @@ const (
 	// container to publish its process id. A device image that never launches fails the session
 	// rather than leaving a browser spinning forever.
 	WebTerminalWaitTimeout = 10 * time.Minute
+
+	webTerminalRuntimeDirectoryMode os.FileMode = 0o750
 )
 
 var (
@@ -98,7 +100,6 @@ func RunTerminalWithOperations(
 		return err
 	}
 
-	//nolint:gosec // the shell is the node author's own containerlab vocabulary, not input.
 	return operations.Exec([]string{shell})
 }
 
@@ -148,7 +149,7 @@ func WriteProcessIDFile(path string) error {
 	}
 
 	directory := filepath.Dir(path)
-	if err := os.MkdirAll(directory, 0o755); err != nil {
+	if err := os.MkdirAll(directory, webTerminalRuntimeDirectoryMode); err != nil {
 		return fmt.Errorf("creating the web terminal runtime directory: %w", err)
 	}
 

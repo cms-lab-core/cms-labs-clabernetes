@@ -1,6 +1,5 @@
 //go:build linux
 
-//nolint:err113,gosec // diagnostics are structured one-off errors; /proc reads are fixed paths.
 package directruntime
 
 import (
@@ -95,7 +94,6 @@ func (linuxTerminalOperations) EnterNamespaces(processID int) error {
 }
 
 func enterNamespace(processID int, namespace string) error {
-	//nolint:gosec // the path is derived from a validated process id.
 	target, err := os.Open(fmt.Sprintf("/proc/%d/ns/%s", processID, namespace))
 	if err != nil {
 		return fmt.Errorf(
@@ -156,7 +154,7 @@ func (linuxTerminalOperations) Exec(argv []string) error {
 // ttyd already set for its pty, and no c9s helper variables, so the device's shell does not
 // inherit launcher plumbing.
 func terminalEnvironment() []string {
-	environment := make([]string, 0, len(os.Environ())+2)
+	environment := make([]string, 0, len(os.Environ())+1)
 
 	for _, entry := range os.Environ() {
 		if strings.HasPrefix(entry, "TERM=") || strings.HasPrefix(entry, "NO_COLOR=") {

@@ -13,6 +13,8 @@ import (
 	clabernetesinternaldirectruntime "github.com/clabernetes/clabernetes/internal/directruntime"
 )
 
+var errNoDeviceProcess = errors.New("no device process")
+
 // recordingTerminalOperations records the sequencing a web terminal session must follow: it
 // finds the application process, enters its namespaces, and only then becomes the shell.
 type recordingTerminalOperations struct {
@@ -165,8 +167,7 @@ func TestRunTerminalRejectsAMultiLineShell(t *testing.T) {
 func TestRunTerminalReportsAnUnresolvableProcessID(t *testing.T) {
 	t.Parallel()
 
-	waitErr := errors.New("no device process")
-	operations := &recordingTerminalOperations{err: waitErr}
+	operations := &recordingTerminalOperations{err: errNoDeviceProcess}
 
 	err := clabernetesinternaldirectruntime.RunTerminalWithOperations(
 		clabernetesinternaldirectruntime.WebTerminalOptions{
@@ -174,7 +175,7 @@ func TestRunTerminalReportsAnUnresolvableProcessID(t *testing.T) {
 		},
 		operations,
 	)
-	if !errors.Is(err, waitErr) {
+	if !errors.Is(err, errNoDeviceProcess) {
 		t.Fatalf("error = %v, want the wait failure", err)
 	}
 	if operations.execed != nil {
@@ -205,6 +206,7 @@ func TestWriteProcessIDFilePublishesThisProcess(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	//nolint:gosec // path is created inside this test's private temporary directory.
 	raw, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatal(err)
@@ -247,6 +249,7 @@ func TestWriteProcessIDFilePublishesAtomically(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	//nolint:gosec // path is created inside this test's private temporary directory.
 	raw, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatal(err)
