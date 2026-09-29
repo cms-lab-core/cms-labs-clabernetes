@@ -146,6 +146,8 @@ sys.exit(0 if version in {"0.5.0", "0.6.0"} else 1)
     def test_exact_versions_are_normalized_without_github(self) -> None:
         self.assertEqual(MODULE.normalize_version("v0.6.0"), "0.6.0")
         self.assertEqual(MODULE.normalize_version("0.0.7"), "0.0.7")
+        self.assertEqual(MODULE.normalize_version("v0.8.0-4"), "0.8.0-4")
+        self.assertEqual(MODULE.normalize_version("0.8.0-12"), "0.8.0-12")
         self.assertEqual(MODULE.normalize_version("0.0.0-abc1234"), "0.0.0-abc1234")
         with self.assertRaises(MODULE.typer.Exit):
             MODULE.normalize_version("not-a-version")

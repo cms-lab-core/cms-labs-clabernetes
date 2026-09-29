@@ -33,6 +33,9 @@ stderr = Console(stderr=True)
 DEFAULT_REPOSITORY = "maintainer64/cms-labs-clabernetes"
 CHART_REFERENCE = "oci://ghcr.io/maintainer64/cms-labs-clabernetes/clabernetes"
 STABLE_VERSION = re.compile(r"^v?(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$")
+FORK_VERSION = re.compile(
+    r"^v?(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)-[1-9][0-9]*$"
+)
 DEVELOPMENT_VERSION = re.compile(r"^0\.0\.0-[0-9a-f]{7,40}$")
 GH_PATH_OPTION = typer.Option(..., exists=True, dir_okay=False)
 HELM_PATH_OPTION = typer.Option(..., exists=True, dir_okay=False)
@@ -117,11 +120,15 @@ def _gh_json(gh: Path, endpoint: str) -> Any:
 
 
 def normalize_version(value: str) -> str:
-    if STABLE_VERSION.fullmatch(value) or DEVELOPMENT_VERSION.fullmatch(value):
+    if (
+        STABLE_VERSION.fullmatch(value)
+        or FORK_VERSION.fullmatch(value)
+        or DEVELOPMENT_VERSION.fullmatch(value)
+    ):
         return value.removeprefix("v")
     _fail(
         f"invalid c9s version {value!r}; expected latest, cms, local, select, "
-        "X.Y.Z, vX.Y.Z, or 0.0.0-<short-sha>"
+        "X.Y.Z, vX.Y.Z, vX.Y.Z-<fork-revision>, or 0.0.0-<short-sha>"
     )
 
 
