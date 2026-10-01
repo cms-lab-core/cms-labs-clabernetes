@@ -5,7 +5,7 @@
 
 set -euo pipefail
 
-registry="${REGISTRY:-ghcr.io/maintainer64/cms-labs-clabernetes}"
+registry="${REGISTRY:-ghcr.io/cms-lab-core/cms-labs-clabernetes}"
 registry_host="${registry%%/*}"
 config="${DOCKER_CONFIG:-${HOME}/.docker}/config.json"
 

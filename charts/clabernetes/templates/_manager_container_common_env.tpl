@@ -16,9 +16,9 @@ makes the configured image visible in the cluster instead of only in the manager
 {{- if $configured -}}
 {{- $configured -}}
 {{- else if eq .Chart.Version "0.0.0" -}}
-"ghcr.io/maintainer64/cms-labs-clabernetes/clabernetes-launcher:dev-latest"
+"ghcr.io/cms-lab-core/cms-labs-clabernetes/clabernetes-launcher:dev-latest"
 {{- else -}}
-"ghcr.io/maintainer64/cms-labs-clabernetes/clabernetes-launcher:{{ .Chart.Version }}"
+"ghcr.io/cms-lab-core/cms-labs-clabernetes/clabernetes-launcher:{{ .Chart.Version }}"
 {{- end -}}
 {{- end -}}
 
@@ -43,9 +43,9 @@ makes the configured image visible in the cluster instead of only in the manager
   {{- if .Values.manager.image }}
   value: {{ .Values.manager.image }}
   {{- else if eq .Chart.Version "0.0.0" }}
-  value: "ghcr.io/maintainer64/cms-labs-clabernetes/clabernetes-manager:dev-latest"
+  value: "ghcr.io/cms-lab-core/cms-labs-clabernetes/clabernetes-manager:dev-latest"
   {{- else }}
-  value: "ghcr.io/maintainer64/cms-labs-clabernetes/clabernetes-manager:{{ .Chart.Version }}"
+  value: "ghcr.io/cms-lab-core/cms-labs-clabernetes/clabernetes-manager:{{ .Chart.Version }}"
   {{- end }}
 - name: LAUNCHER_IMAGE
   value: {{ include "launcherImage" . }}

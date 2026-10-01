@@ -94,11 +94,11 @@ jobs:
           set -euo pipefail
           helm registry login -u "$GITHUB_ACTOR" -p "$GITHUB_TOKEN" ghcr.io
 
-          MANAGER_IMAGE="ghcr.io/maintainer64/cms-labs-clabernetes/clabernetes-manager:${IMAGE_VERSION}"
+          MANAGER_IMAGE="ghcr.io/cms-lab-core/cms-labs-clabernetes/clabernetes-manager:${IMAGE_VERSION}"
           # The launcher image is pinned alongside the manager image so a node's web terminal runs
           # the same build as the controller that rendered it; the chart's own default would
           # resolve from the chart version, which is not the image tag on development channels.
-          LAUNCHER_IMAGE="ghcr.io/maintainer64/cms-labs-clabernetes/clabernetes-launcher:${IMAGE_VERSION}"
+          LAUNCHER_IMAGE="ghcr.io/cms-lab-core/cms-labs-clabernetes/clabernetes-launcher:${IMAGE_VERSION}"
           export MANAGER_IMAGE LAUNCHER_IMAGE SOURCE_SHA
 
           if [[ "$CHANNEL" == "unpublished" ]]; then
@@ -117,7 +117,7 @@ jobs:
             charts/clicker/Chart.yaml
 
           helm package charts/clicker --version "$RELEASE_VERSION"
-          helm push "clicker-${RELEASE_VERSION}.tgz" oci://ghcr.io/maintainer64/cms-labs-clabernetes
+          helm push "clicker-${RELEASE_VERSION}.tgz" oci://ghcr.io/cms-lab-core/cms-labs-clabernetes
 
           if [[ "$CHANNEL" == "cms" ]]; then
             # Keep the clicker dependency aligned with the mutable CMS chart.
@@ -126,14 +126,14 @@ jobs:
               charts/clabernetes/Chart.yaml
           fi
           helm package charts/clabernetes --version "$RELEASE_VERSION"
-          helm push "clabernetes-${RELEASE_VERSION}.tgz" oci://ghcr.io/maintainer64/cms-labs-clabernetes
+          helm push "clabernetes-${RELEASE_VERSION}.tgz" oci://ghcr.io/cms-lab-core/cms-labs-clabernetes
 
           if [[ "$CHANNEL" == "cms" ]]; then
             {
               echo "## CMS development artifacts"
               echo
               echo "- Source SHA: \`${SOURCE_SHA}\`"
-              echo "- Mutable chart: \`oci://ghcr.io/maintainer64/cms-labs-clabernetes/clabernetes:0.0.0\`"
+              echo "- Mutable chart: \`oci://ghcr.io/cms-lab-core/cms-labs-clabernetes/clabernetes:0.0.0\`"
               echo "- Manager image: \`${MANAGER_IMAGE}\`"
               echo
               echo '```bash'
@@ -197,14 +197,14 @@ jobs:
               echo "## Verified CMS artifacts"
               echo
               echo "- Source SHA: \`${SOURCE_SHA}\`"
-              echo "- Chart: \`oci://ghcr.io/maintainer64/cms-labs-clabernetes/clabernetes:0.0.0\`"
+              echo "- Chart: \`oci://ghcr.io/cms-lab-core/cms-labs-clabernetes/clabernetes:0.0.0\`"
             } >> "$GITHUB_STEP_SUMMARY"
           else
-            CHART="oci://ghcr.io/maintainer64/cms-labs-clabernetes/clabernetes"
+            CHART="oci://ghcr.io/cms-lab-core/cms-labs-clabernetes/clabernetes"
             helm show chart "$CHART" --version "$RELEASE_VERSION"
             for image in clabernetes-manager clabernetes-launcher; do
               docker buildx imagetools inspect \
-                "ghcr.io/maintainer64/cms-labs-clabernetes/${image}:${RELEASE_VERSION}" \
+                "ghcr.io/cms-lab-core/cms-labs-clabernetes/${image}:${RELEASE_VERSION}" \
                 | tee "${image}.txt"
               grep -q 'linux/amd64' "${image}.txt"
               grep -q 'linux/arm64' "${image}.txt"

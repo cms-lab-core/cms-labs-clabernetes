@@ -60,7 +60,7 @@ include .mk/e2e.mk
 ## Image names + tag used by the build-* targets. IMAGE_TAG defaults to "latest"
 ## for one-off local builds; the e2e flow overrides it (IMAGE_TAG=dev-latest).
 IMAGE_TAG ?= latest
-IMAGE_BASE ?= ghcr.io/maintainer64/cms-labs-clabernetes
+IMAGE_BASE ?= ghcr.io/cms-lab-core/cms-labs-clabernetes
 MANAGER_IMAGE ?= $(IMAGE_BASE)/clabernetes-manager
 LAUNCHER_IMAGE ?= $(IMAGE_BASE)/clabernetes-launcher
 CLABVERTER_IMAGE ?= $(IMAGE_BASE)/clabverter
@@ -93,7 +93,7 @@ VERSION ?= latest
 NS ?= c9s
 DEV_NS ?= c9s-dev
 # Image registry prefix passed to DevSpace as REGISTRY (not the generic REGISTRY env var).
-DEV_REGISTRY ?= ghcr.io/maintainer64/cms-labs-clabernetes
+DEV_REGISTRY ?= ghcr.io/cms-lab-core/cms-labs-clabernetes
 DOCS_SITE_DIR ?= docs-site
 DOCS_HOST ?= 0.0.0.0
 PNPM ?= pnpm

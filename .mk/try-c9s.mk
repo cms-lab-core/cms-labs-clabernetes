@@ -1,5 +1,5 @@
 TRY_C9S_CLUSTER_NAME ?= try-c9s
-TRY_C9S_CHART ?= oci://ghcr.io/maintainer64/cms-labs-clabernetes/clabernetes
+TRY_C9S_CHART ?= oci://ghcr.io/cms-lab-core/cms-labs-clabernetes/clabernetes
 TRY_C9S_CHART_VERSION ?=
 TRY_C9S_TOPOLOGY ?= examples/basic/srl-multitool.yaml
 TRY_C9S_TOPOLOGY_NAME ?= srl-multitool
@@ -205,7 +205,7 @@ try-c9s-apply-topology: try-c9s-install
 			revision="$$tag"; \
 			echo "--> TRY-C9S: fetching demo from Git tag $$tag"; \
 		fi; \
-		$(GH) api "repos/maintainer64/cms-labs-clabernetes/contents/examples/basic/srl-multitool.yaml?ref=$$revision" --jq .content | base64 --decode > "$(TRY_C9S_STATE_DIR)/topology.yaml"; \
+		$(GH) api "repos/cms-lab-core/cms-labs-clabernetes/contents/examples/basic/srl-multitool.yaml?ref=$$revision" --jq .content | base64 --decode > "$(TRY_C9S_STATE_DIR)/topology.yaml"; \
 		topology="$(TRY_C9S_STATE_DIR)/topology.yaml"; \
 	fi; \
 	echo "--> TRY-C9S: applying sample topology $$topology"; \

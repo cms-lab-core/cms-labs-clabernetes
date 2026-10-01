@@ -30,8 +30,8 @@ from rich.table import Table  # ty: ignore[unresolved-import]
 app = typer.Typer(add_completion=False, no_args_is_help=True)
 stderr = Console(stderr=True)
 
-DEFAULT_REPOSITORY = "maintainer64/cms-labs-clabernetes"
-CHART_REFERENCE = "oci://ghcr.io/maintainer64/cms-labs-clabernetes/clabernetes"
+DEFAULT_REPOSITORY = "cms-lab-core/cms-labs-clabernetes"
+CHART_REFERENCE = "oci://ghcr.io/cms-lab-core/cms-labs-clabernetes/clabernetes"
 STABLE_VERSION = re.compile(r"^v?(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$")
 FORK_VERSION = re.compile(
     r"^v?(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)-[1-9][0-9]*$"

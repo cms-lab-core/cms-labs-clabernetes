@@ -13,7 +13,7 @@ workerPodAnnotations: {}
 workerPodLabels: {}
 
 imagePullPolicy: IfNotPresent
-# image: ghcr.io/maintainer64/cms-labs-clabernetes/clabernetes-manager:{{ .Chart.Version }}
+# image: ghcr.io/cms-lab-core/cms-labs-clabernetes/clabernetes-manager:{{ .Chart.Version }}
 # workerImage: busybox
 
 # the command that and script that will be invoked; keep in mind the default image for the worker is

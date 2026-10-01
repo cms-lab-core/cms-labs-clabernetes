@@ -32,7 +32,7 @@ RUN TARGET_OS="${TARGETOS:-linux}" && \
 
 FROM gcr.io/distroless/static-debian12:nonroot
 
-LABEL org.opencontainers.image.source="https://github.com/maintainer64/cms-labs-clabernetes"
+LABEL org.opencontainers.image.source="https://github.com/cms-lab-core/cms-labs-clabernetes"
 
 WORKDIR /clabernetes
 COPY --from=builder --chown=nonroot:nonroot /clabernetes/work /clabernetes/work

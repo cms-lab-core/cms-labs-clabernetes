@@ -35,7 +35,7 @@ RUN --mount=type=cache,target=/root/.cache/go-build \
 
 FROM debian:bookworm-slim
 
-LABEL org.opencontainers.image.source="https://github.com/maintainer64/cms-labs-clabernetes"
+LABEL org.opencontainers.image.source="https://github.com/cms-lab-core/cms-labs-clabernetes"
 
 ARG TTYD_VERSION=1.7.7
 ARG TARGETARCH

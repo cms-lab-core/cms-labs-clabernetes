@@ -27,8 +27,8 @@ app = typer.Typer(add_completion=False, no_args_is_help=True)
 console = Console()
 error_console = Console(stderr=True)
 
-DEFAULT_CHART = "oci://ghcr.io/maintainer64/cms-labs-clabernetes/clabernetes"
-DEFAULT_IMAGE_BASE = "ghcr.io/maintainer64/cms-labs-clabernetes"
+DEFAULT_CHART = "oci://ghcr.io/cms-lab-core/cms-labs-clabernetes/clabernetes"
+DEFAULT_IMAGE_BASE = "ghcr.io/cms-lab-core/cms-labs-clabernetes"
 RELEASE_SCRIPT = Path(__file__).with_name("c9s_releases.py")
 CONTEXT_OPTION = typer.Option("")
 NAMESPACE_OPTION = typer.Option("c9s")

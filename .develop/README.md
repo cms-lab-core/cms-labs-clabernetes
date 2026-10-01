@@ -43,7 +43,7 @@ LOCAL_REGISTRY=0 make dev
 LOCAL_REGISTRY=1 make dev
 ```
 
-Default `DEV_REGISTRY`: `ghcr.io/maintainer64/cms-labs-clabernetes` (override with `DEV_REGISTRY=... make dev`).
+Default `DEV_REGISTRY`: `ghcr.io/cms-lab-core/cms-labs-clabernetes` (override with `DEV_REGISTRY=... make dev`).
 
 ### External registry (`LOCAL_REGISTRY=0`)
 
@@ -66,8 +66,8 @@ LOCAL_REGISTRY=0 make dev
 
 DevSpace builds and pushes three images (tags `dev-latest` and the current git commit hash):
 
-- `ghcr.io/maintainer64/cms-labs-clabernetes/clabernetes-manager-dev`
-- `ghcr.io/maintainer64/cms-labs-clabernetes/clabernetes-manager`
+- `ghcr.io/cms-lab-core/cms-labs-clabernetes/clabernetes-manager-dev`
+- `ghcr.io/cms-lab-core/cms-labs-clabernetes/clabernetes-manager`
 
 The `always-pull` profile is enabled automatically via `external-registry` for this path so nodes pick up freshly pushed
 tags. Override the registry with `DEV_REGISTRY=ghcr.io/my-org/clabernetes make dev` if needed.
@@ -75,7 +75,7 @@ tags. Override the registry with `DEV_REGISTRY=ghcr.io/my-org/clabernetes make d
 Verify a push before debugging `ImagePullBackOff`:
 
 ```bash
-docker buildx imagetools inspect ghcr.io/maintainer64/cms-labs-clabernetes/clabernetes-manager-dev:dev-latest
+docker buildx imagetools inspect ghcr.io/cms-lab-core/cms-labs-clabernetes/clabernetes-manager-dev:dev-latest
 ```
 
 ## In-cluster registry (default on remote clusters)
@@ -160,7 +160,7 @@ pod use explicit `:dev-latest` refs via `MANAGER_*_TAGGED` variables in `devspac
 
 - Stale deployment: `make purge-dev`, then `make dev`
 - Image never pushed: confirm the build finished without push errors; inspect with
-  `docker buildx imagetools inspect ghcr.io/maintainer64/cms-labs-clabernetes/clabernetes-manager-dev:dev-latest`
+  `docker buildx imagetools inspect ghcr.io/cms-lab-core/cms-labs-clabernetes/clabernetes-manager-dev:dev-latest`
 - Private GHCR package: make `clabernetes-manager-dev` public in GitHub package settings, or use
   the in-cluster registry (`make dev`)
 - Wrong tag: DevSpace tags images with `dev-latest` and the git commit hash; both must exist in the registry
@@ -168,9 +168,9 @@ pod use explicit `:dev-latest` refs via `MANAGER_*_TAGGED` variables in `devspac
 ### Pushed to the wrong GHCR package path
 
 `make dev` passes `DEV_REGISTRY` to DevSpace as `REGISTRY`. The value must be the full GHCR
-repository prefix, for example `ghcr.io/maintainer64/cms-labs-clabernetes` — not just `ghcr.io/clabernetes`.
-A short prefix produces images like `ghcr.io/maintainer64/cms-labs-clabernetes-manager-dev` instead of
-`ghcr.io/maintainer64/cms-labs-clabernetes/clabernetes-manager-dev`, and the cluster will not find them where
+repository prefix, for example `ghcr.io/cms-lab-core/cms-labs-clabernetes` — not just `ghcr.io/clabernetes`.
+A short prefix produces images like `ghcr.io/cms-lab-core/cms-labs-clabernetes-manager-dev` instead of
+`ghcr.io/cms-lab-core/cms-labs-clabernetes/clabernetes-manager-dev`, and the cluster will not find them where
 you expect in the org packages UI.
 
 ### `Skip building image` with `LOCAL_REGISTRY=0`

@@ -28,7 +28,7 @@ manager:
   podLabels: {}
 
   # defaults to .Chart.Version, if 0.0.0 version defaults to 'dev-latest' tag
-  image: "" # ghcr.io/maintainer64/cms-labs-clabernetes/clabernetes-manager:{{ .Chart.Version }}
+  image: "" # ghcr.io/cms-lab-core/cms-labs-clabernetes/clabernetes-manager:{{ .Chart.Version }}
   imagePullPolicy: IfNotPresent
 
   replicaCount: 3
@@ -169,7 +169,7 @@ globalConfig:
     # web terminal.
     launcher:
       # image defaults to .Chart.Version, if 0.0.0 version defaults to 'dev-latest' tag
-      image: "" # ghcr.io/maintainer64/cms-labs-clabernetes/clabernetes-launcher:{{ .Chart.Version }}
+      image: "" # ghcr.io/cms-lab-core/cms-labs-clabernetes/clabernetes-launcher:{{ .Chart.Version }}
       # imagePullPolicy applies to the launcher image; an empty value reuses each device image's
       # resolved pull policy.
       imagePullPolicy: IfNotPresent

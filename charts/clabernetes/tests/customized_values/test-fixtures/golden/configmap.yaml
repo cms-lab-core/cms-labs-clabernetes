@@ -32,7 +32,7 @@ data:
   containerStopSignals: "false"
   launcher: |-
     ---
-    image: "ghcr.io/maintainer64/cms-labs-clabernetes/clabernetes-launcher:dev-latest"
+    image: "ghcr.io/cms-lab-core/cms-labs-clabernetes/clabernetes-launcher:dev-latest"
     imagePullPolicy: "IfNotPresent"
   imagePullPolicy: Always
   imagePullSecrets: |-

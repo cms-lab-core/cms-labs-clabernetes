@@ -5,7 +5,7 @@
 
 This is the CMS Labs fork of [upstream Clabernetes](https://github.com/clabernetes/clabernetes).
 The `cms` branch adds opt-in per-node ttyd/tmux web terminals and publishes multi-architecture
-images and OCI charts under `ghcr.io/maintainer64/cms-labs-clabernetes`.
+images and OCI charts under `ghcr.io/cms-lab-core/cms-labs-clabernetes`.
 
 <p>
   <img src="https://gitlab.com/rdodin/pics/-/wikis/uploads/b5d611838fcb9c588b6311bccf11b954/c9s_logo1-upscale2x-white-tag+font-min__1_.png" width="200" align="left" alt="clabernetes"/>
@@ -157,7 +157,7 @@ troubleshooting): [`.develop/README.md`](.develop/README.md).
 | `make dev` | Default. Remote clusters → project-managed local registry. kind/minikube → push to `REGISTRY`. |
 | `LOCAL_REGISTRY=0 make dev` | Push dev images to `DEV_REGISTRY` (default GHCR); cluster pulls from there. Requires `docker login`. |
 
-Default `DEV_REGISTRY` is `ghcr.io/maintainer64/cms-labs-clabernetes`.
+Default `DEV_REGISTRY` is `ghcr.io/cms-lab-core/cms-labs-clabernetes`.
 
 ### Common options
 
