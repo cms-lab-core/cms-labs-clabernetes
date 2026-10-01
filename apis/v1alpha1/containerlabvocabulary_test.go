@@ -160,10 +160,22 @@ func collectYAMLTags(walk reflect.Type, into map[string][]string) {
 	into[walk.Name()] = tags
 }
 
+// clabernetesOwnedNodeVocabulary is the vocabulary clabernetes adds to a node definition on
+// purpose: containerlab does not parse these, so they must never reach the imported module's
+// strict decoding, and they are accepted here instead of in pinnedContainerlabVocabulary so that
+// the subset guard still catches an accidental *unknown* field.
+//
+// The key is "Type.field"; every entry states where the value is consumed instead.
+var clabernetesOwnedNodeVocabulary = map[string]string{
+	"NodeDefinition.launcher-image": "the per-node launcher image override, resolved into the device Pod's web-terminal sidecar by the renderer",
+	"NodeDefinition.ttyd-shell":     "the per-node web terminal request, resolved into the device Pod's web-terminal sidecar by the controller",
+}
+
 // TestNodeVocabularyIsContainerlabSubset is the guard that would have caught the publish,
 // sandbox, kernel, wait-for and top-level SANs fields: every yaml tag clabernetes serializes
-// toward the imported containerlab module must exist on the matching containerlab object,
-// otherwise the module's strict definition decoding rejects the whole node.
+// toward the imported containerlab module must exist on the matching containerlab object -- or be
+// a field clabernetes owns and keeps out of the module -- otherwise the module's strict
+// definition decoding rejects the whole node.
 func TestNodeVocabularyIsContainerlabSubset(t *testing.T) {
 	ours := map[string][]string{}
 
@@ -185,15 +197,27 @@ func TestNodeVocabularyIsContainerlabSubset(t *testing.T) {
 		}
 
 		for _, tag := range tags {
-			if !slices.Contains(theirs, tag) {
-				t.Errorf(
-					"%s field %q does not exist in containerlab %s -- the device runtime would fail to"+
-						" parse a topology using it",
-					typeName,
-					tag,
-					pinnedContainerlabVersion,
-				)
+			if slices.Contains(theirs, tag) {
+				continue
 			}
+
+			if owned, ok := clabernetesOwnedNodeVocabulary[typeName+"."+tag]; ok {
+				if !strings.HasPrefix(owned, "the ") {
+					t.Errorf(
+						"clabernetes-owned field %s.%s must say what consumes it", typeName, tag,
+					)
+				}
+
+				continue
+			}
+
+			t.Errorf(
+				"%s field %q does not exist in containerlab %s -- the device runtime would fail to"+
+					" parse a topology using it",
+				typeName,
+				tag,
+				pinnedContainerlabVersion,
+			)
 		}
 	}
 }

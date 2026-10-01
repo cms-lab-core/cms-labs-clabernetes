@@ -2,12 +2,12 @@
 
 ### Requirement: Installable artifact catalog
 
-The repository SHALL provide `make ls-releases`, backed by the UV-run release CLI, that invokes the pinned repository-local GitHub CLI with paginated JSON output to retrieve every page of the repository's GitHub Releases and successful development workflow candidates. It SHALL include the mutable `main` chart when available, exclude drafts and failed/incomplete development runs, probe OCI chart candidates concurrently with the pinned repository-local Helm binary, omit candidates whose exact OCI chart is unavailable, sort installable stable and development entries by publication or workflow-availability time from newest to oldest, and display the newest 10 installable entries by default. `make ls-releases ALL=1` SHALL probe and display the complete installable catalog. The target SHALL NOT require Kubernetes access or mutate a cluster.
+The repository SHALL provide `make ls-releases`, backed by the UV-run release CLI, that invokes the pinned repository-local GitHub CLI with paginated JSON output to retrieve every page of the repository's GitHub Releases and successful development workflow candidates. It SHALL include the mutable `cms` chart when available, exclude drafts and failed/incomplete development runs, probe OCI chart candidates concurrently with the pinned repository-local Helm binary, omit candidates whose exact OCI chart is unavailable, sort installable stable and development entries by publication or workflow-availability time from newest to oldest, and display the newest 10 installable entries by default. `make ls-releases ALL=1` SHALL probe and display the complete installable catalog. The target SHALL NOT require Kubernetes access or mutate a cluster.
 
 #### Scenario: List all published releases
 
 - **WHEN** a user runs `make ls-releases` and the API returns multiple pages
-- **THEN** the CLI follows pagination, discovers stable/main/development candidates, probes them concurrently, and displays the newest 10 candidates whose exact OCI charts are available
+- **THEN** the CLI follows pagination, discovers stable/cms/development candidates, probes them concurrently, and displays the newest 10 candidates whose exact OCI charts are available
 
 #### Scenario: API pages are not date ordered
 
@@ -22,7 +22,7 @@ The repository SHALL provide `make ls-releases`, backed by the UV-run release CL
 #### Scenario: Complete release catalog is requested
 
 - **WHEN** a user runs `make ls-releases ALL=1`
-- **THEN** the CLI probes and displays every stable, main, or successful development candidate whose exact OCI chart is available
+- **THEN** the CLI probes and displays every stable, cms, or successful development candidate whose exact OCI chart is available
 
 #### Scenario: Release probes are concurrent
 
@@ -31,8 +31,8 @@ The repository SHALL provide `make ls-releases`, backed by the UV-run release CL
 
 #### Scenario: Main chart is available
 
-- **WHEN** the latest successful main workflow has published chart `0.0.0`
-- **THEN** the catalog includes a distinct `main` row with channel `main` and Version `0.0.0`, which can be supplied as `VERSION=0.0.0` or `VERSION=main`
+- **WHEN** the latest successful cms workflow has published chart `0.0.0`
+- **THEN** the catalog includes a distinct `cms` row with channel `cms` and Version `0.0.0`, which can be supplied as `VERSION=0.0.0` or `VERSION=cms`
 
 #### Scenario: Unpublished development chart is available
 
@@ -106,10 +106,10 @@ The CLI SHALL provide a Rich/Typer interactive selector that presents stable rel
 - **WHEN** the user explicitly selects an entry marked as a prerelease
 - **THEN** the selector returns its normalized version without presenting it as stable
 
-#### Scenario: User chooses main
+#### Scenario: User chooses cms
 
-- **WHEN** the user explicitly selects the mutable main channel
-- **THEN** the selector returns `main` and visibly marks it as moving development content
+- **WHEN** the user explicitly selects the mutable cms channel
+- **THEN** the selector returns `cms` and visibly marks it as moving development content
 
 #### Scenario: User chooses an unpublished commit build
 
@@ -195,7 +195,7 @@ A GitHub release catalog entry SHALL be treated as a candidate until the install
 
 ### Requirement: Development build discovery
 
-The CLI SHALL present `main` as a distinct mutable channel and SHALL discover recent unpublished-build candidates from manually dispatched `Create dev release` workflow runs through the GitHub Actions API. It SHALL display the source branch, short SHA version, workflow completion time, and workflow URL without describing those values as release publication or package push metadata.
+The CLI SHALL present `cms` as a distinct mutable channel and SHALL discover recent unpublished-build candidates from manually dispatched `Create dev release` workflow runs through the GitHub Actions API. It SHALL display the source branch, short SHA version, workflow completion time, and workflow URL without describing those values as release publication or package push metadata.
 
 #### Scenario: Successful manual build candidate
 
@@ -215,7 +215,7 @@ The CLI SHALL present `main` as a distinct mutable channel and SHALL discover re
 #### Scenario: Main channel is displayed
 
 - **WHEN** the development catalog is shown
-- **THEN** it presents `main` separately as mutable chart `0.0.0` and does not mix it into stable release ordering
+- **THEN** it presents `cms` separately as mutable chart `0.0.0` and does not mix it into stable release ordering
 
 ### Requirement: Historical demo support visibility
 

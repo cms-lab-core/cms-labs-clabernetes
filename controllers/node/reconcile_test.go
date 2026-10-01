@@ -468,6 +468,31 @@ func TestDefaultManagementPortsCarryExactApplicationProtocols(t *testing.T) {
 	}
 }
 
+func TestWebTerminalServicePortHasStableDiscoveryName(t *testing.T) {
+	t.Parallel()
+
+	node := nodeReconcileTestNode()
+	node.Spec.TTYDShell = "/bin/sh"
+	exposedPorts := &clabernetesapisv1alpha1.NodeExposedPorts{
+		Ports: []clabernetesapisv1alpha1.NodeExposedPort{{
+			DestinationPort: clabernetesconstants.WebTerminalPort,
+			ExposePort:      clabernetesconstants.WebTerminalPort,
+			Protocol:        clabernetesconstants.TCP,
+		}},
+	}
+
+	service := NewServiceReconciler(
+		&claberneteslogging.FakeInstance{},
+		clabernetesconfig.GetFakeManager,
+	).RenderExposeService(node, node.GetName(), &ResolvedProfile{}, exposedPorts)
+	if service == nil || len(service.Spec.Ports) != 1 {
+		t.Fatalf("web terminal Service = %#v, want one port", service)
+	}
+	if service.Spec.Ports[0].Name != "ttyd" {
+		t.Fatalf("web terminal port name = %q, want ttyd", service.Spec.Ports[0].Name)
+	}
+}
+
 func TestNoneExposurePrunesOnlyExposeService(t *testing.T) {
 	t.Parallel()
 

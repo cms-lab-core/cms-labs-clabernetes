@@ -24,6 +24,7 @@ import (
 	clabernetesconstants "github.com/clabernetes/clabernetes/constants"
 	clabernetesinternaldeviceplan "github.com/clabernetes/clabernetes/internal/deviceplan"
 	clabernetesinternaldirectruntime "github.com/clabernetes/clabernetes/internal/directruntime"
+	clabernetesutilkubernetes "github.com/clabernetes/clabernetes/util/kubernetes"
 	k8sappsv1 "k8s.io/api/apps/v1"
 	k8scorev1 "k8s.io/api/core/v1"
 	apiresource "k8s.io/apimachinery/pkg/api/resource"
@@ -74,10 +75,22 @@ const (
 	probePasswordPath                = "/var/lib/clabernetes/probe-secret/password"    //nolint:gosec // identifier or path, not a credential.
 	preparationName                  = "planner"
 	connectivityName                 = "clabwire"
-	directWorkloadLabel              = clabernetesconstants.LabelDirectWorkload
-	planDigestAnnotation             = "c9s.run/node-plan-digest"
+	webTerminalName                  = "ttyd"
+	webTerminalVolumeName            = "node-web-terminal"
+	webTerminalRuntimePath           = "/var/run/clabernetes/terminal"
+	// webTerminalSessionName is the tmux session a browser session attaches to. It is stable per
+	// device so reconnecting lands in the same shell with its history, the way the launcher
+	// image's tmux session always has.
+	webTerminalSessionName = "clabernetes"
+	// webTerminalBinaryPath is the c9s binary inside the launcher image; it enters the device
+	// container's namespaces and becomes the requested shell there.
+	webTerminalBinaryPath = "/clabernetes/manager"
+	directWorkloadLabel   = clabernetesconstants.LabelDirectWorkload
+	planDigestAnnotation  = "c9s.run/node-plan-digest"
 	// node-runtime CLI invocation tokens.
 	runtimeCommandName              = "node-runtime"
+	runtimeFlagProcessIDFile        = "--processIDFile"
+	runtimeFlagShell                = "--shell"
 	runtimeFlagPlan                 = "--plan"
 	runtimeFlagInput                = "--input"
 	runtimeFlagContainer            = "--containerID"
@@ -141,8 +154,20 @@ type Options struct {
 	DeviceStateResets                 map[string]string
 	EnableContainerStopSignals        bool
 	EnableApplicationLogBroker        bool
-	LinkLifecycleMode                 clabernetesinternaldeviceplan.LinkApplyMode
-	LinkLifecyclePlanDigest           string
+	// WebTerminals holds the per-Node browser terminals requested by the lab, keyed by node id.
+	// A non-empty map adds one ttyd/tmux sidecar to the Pod, a shared process namespace, and a
+	// published application process id per participating Node.
+	WebTerminals map[string]WebTerminal
+	// LauncherImage is the helper image the ttyd/tmux sidecar runs from; the manager image is
+	// distroless and cannot carry a web terminal. An empty image with a non-empty WebTerminals
+	// map is a rendering error: the Pod would not schedule rather than silently lose terminals.
+	// A WebTerminal's own LauncherImage takes precedence over this lab-wide value.
+	LauncherImage string
+	// LauncherImagePullPolicy is the pull policy for the launcher image that actually runs;
+	// empty leaves the image's default policy to the kubelet.
+	LauncherImagePullPolicy string
+	LinkLifecycleMode       clabernetesinternaldeviceplan.LinkApplyMode
+	LinkLifecyclePlanDigest string
 }
 
 // ProbePolicy is explicit, kind-neutral NodeProfile policy for one logical Node. Password
@@ -153,6 +178,17 @@ type ProbePolicy struct {
 	SSHUsername    string
 	SSHPort        int
 	SSHPasswordKey string
+}
+
+// WebTerminal is one Node's request for a browser terminal: the shell the terminal runs in the
+// device container. Grouped Nodes share one Pod network namespace, so a Pod carries at most one.
+type WebTerminal struct {
+	// Shell is the shell (or command) the terminal runs inside the device container, as the
+	// Node's containerlab ttyd-shell field spelled it. Empty means /bin/sh.
+	Shell string
+	// LauncherImage overrides Options.LauncherImage for this Node, so a lab can run the sidecar
+	// from an image the lab itself ships. Empty means the lab-wide launcher image.
+	LauncherImage string
 }
 
 // PlanReferences identifies the immutable cold artifacts mounted by one rendered Deployment.
@@ -622,9 +658,19 @@ func Render(plan clabernetesinternaldeviceplan.Plan,
 		options.EntropySecretName != "",
 		options.ConnectivityRevisionConfigMapName != "",
 		slices.Sorted(maps.Keys(options.PersistentVolumeClaims)),
+		options.WebTerminals,
 	)
 	if err != nil {
 		return nil, err
+	}
+
+	if len(options.WebTerminals) > 0 {
+		volumes = append(volumes, k8scorev1.Volume{
+			Name: webTerminalVolumeName,
+			VolumeSource: k8scorev1.VolumeSource{
+				EmptyDir: &k8scorev1.EmptyDirVolumeSource{},
+			},
+		})
 	}
 
 	if hasLifecycle {
@@ -721,6 +767,21 @@ func Render(plan clabernetesinternaldeviceplan.Plan,
 		volumes = append(volumes, volume)
 	}
 
+	// A web terminal enters the device container's namespaces, which requires a shared PID
+	// namespace; without one the sidecar sees no other process to attach to.
+	var shareProcessNamespace *bool
+	if len(options.WebTerminals) > 0 {
+		terminal, err := renderWebTerminal(options, normalized)
+		if err != nil {
+			return nil, err
+		}
+
+		initContainers = append(initContainers, *terminal)
+
+		shared := true
+		shareProcessNamespace = &shared
+	}
+
 	one := int32(1)
 	zero := int32(0)
 	falseValue := false
@@ -764,14 +825,17 @@ func Render(plan clabernetesinternaldeviceplan.Plan,
 							}},
 						},
 					}},
-					RestartPolicy:  k8scorev1.RestartPolicyAlways,
-					Hostname:       options.Name,
-					DNSPolicy:      dns.policy,
-					DNSConfig:      dns.config,
-					HostAliases:    renderHostAliases(normalized, options.Name),
-					InitContainers: initContainers,
-					Containers:     containers,
-					Volumes:        volumes,
+					RestartPolicy: k8scorev1.RestartPolicyAlways,
+					Hostname:      options.Name,
+					// Only terminal-enabled Pods need to see the device's process; every other
+					// device Pod keeps the default isolated PID namespace.
+					ShareProcessNamespace: shareProcessNamespace,
+					DNSPolicy:             dns.policy,
+					DNSConfig:             dns.config,
+					HostAliases:           renderHostAliases(normalized, options.Name),
+					InitContainers:        initContainers,
+					Containers:            containers,
+					Volumes:               volumes,
 				},
 			},
 		},
@@ -1264,7 +1328,10 @@ func renderApplicationLifecycle(
 	hasEntropy bool,
 	hasConnectivityRevision bool,
 	persistentNodeIDs []string,
+	webTerminals map[string]WebTerminal,
 ) (bool, bool, error) {
+	terminalPrimaryContainers := webTerminalPrimaryContainers(plan, webTerminals)
+
 	containerIndexes := make(map[string]int, len(plan.Containers))
 
 	containerNodes := make(map[string]string, len(plan.Containers))
@@ -1560,6 +1627,19 @@ func renderApplicationLifecycle(
 			lifecyclePlanRoot + "/plan.json",
 			runtimeFlagContainer,
 			containerID,
+		}
+		// A Node with a web terminal publishes the process id it is about to become, so the
+		// terminal sidecar can enter the device's namespaces once the device is running. Only
+		// the Node's primary container publishes: a kind with several containers would
+		// otherwise have them race for the same file, and a session would land in whichever
+		// one started last instead of in the device itself.
+		if terminalPrimaryContainers[containerID] {
+			container.VolumeMounts = append(container.VolumeMounts, webTerminalVolumeMount())
+			container.Command = append(
+				container.Command,
+				runtimeFlagProcessIDFile,
+				webTerminalProcessIDPath(containerNodes[containerID]),
+			)
 		}
 
 		container.Args = nil
@@ -2709,6 +2789,149 @@ func renderHelpers(
 			VolumeMounts: connectivityMounts,
 		},
 	}, nil
+}
+
+// webTerminalVolumeMount is the shared runtime directory the application container publishes its
+// process id into and the terminal sidecar reads it back from.
+func webTerminalVolumeMount() k8scorev1.VolumeMount {
+	return k8scorev1.VolumeMount{Name: webTerminalVolumeName, MountPath: webTerminalRuntimePath}
+}
+
+// webTerminalPrimaryContainers maps the primary container of every terminal-enabled Node to true.
+// A Node's first planned container is the one that owns its namespaces -- the container whose
+// process *is* the device -- so a session entered through it is a session inside the device.
+func webTerminalPrimaryContainers(
+	plan clabernetesinternaldeviceplan.Plan,
+	webTerminals map[string]WebTerminal,
+) map[string]bool {
+	primaries := make(map[string]bool, len(webTerminals))
+
+	for _, node := range plan.Nodes {
+		if _, terminal := webTerminals[node.ID]; !terminal || len(node.ContainerIDs) == 0 {
+			continue
+		}
+
+		primaries[node.ContainerIDs[0]] = true
+	}
+
+	return primaries
+}
+
+// webTerminalProcessIDPath is the per-Node process id file. It is keyed by node id so grouped
+// Nodes keep separate identities, and it is validated into a path segment below.
+func webTerminalProcessIDPath(nodeID string) string {
+	return path.Join(webTerminalRuntimePath, webTerminalNodeID(nodeID)+".pid")
+}
+
+// webTerminalNodeID reduces a node id to a safe path segment. Node ids are UUIDs, so this is a
+// defensive normalization: the value becomes a filename in a shared directory.
+func webTerminalNodeID(nodeID string) string {
+	return clabernetesutilkubernetes.SanitizeName(nodeID)
+}
+
+// renderWebTerminal renders the Pod's ttyd/tmux sidecar: the browser front end. It runs as a
+// native sidecar (restartable init container) so it starts once the device container is past its
+// startup gate, and it is privileged because each session enters the device container's mount,
+// UTS, and IPC namespaces to run the Node's shell there.
+//
+// The sidecar is deliberately the only thing serving the terminal: ttyd binds one port in the
+// Pod's shared network namespace, so a second terminal on the same Pod would silently shadow the
+// first, which is rejected at render time instead.
+func renderWebTerminal(
+	options Options,
+	plan clabernetesinternaldeviceplan.Plan,
+) (*k8scorev1.Container, error) {
+	if len(options.WebTerminals) == 0 {
+		return nil, errors.New("rendering a web terminal without a terminal request")
+	}
+
+	if len(options.WebTerminals) > 1 {
+		return nil, errors.New(
+			"grouped direct Nodes each request a web terminal, but one device Pod serves one" +
+				" terminal port",
+		)
+	}
+
+	nodeIDs := slices.Sorted(maps.Keys(options.WebTerminals))
+	nodeID := nodeIDs[0]
+
+	if !planHasNode(plan, nodeID) {
+		return nil, fmt.Errorf("web terminal names node %q, which is absent from the plan", nodeID)
+	}
+
+	terminal := options.WebTerminals[nodeID]
+
+	// The Node's own launcher-image wins over the lab-wide one: the field is a per-Node override
+	// the lab spelled out, and resolving it here keeps the precedence identical to the config
+	// hierarchy the rest of the runtime follows.
+	launcherImage := strings.TrimSpace(terminal.LauncherImage)
+	if launcherImage == "" {
+		launcherImage = strings.TrimSpace(options.LauncherImage)
+	}
+
+	if launcherImage == "" {
+		return nil, errors.New(
+			"a Node requests a web terminal but no launcher image is configured; set" +
+				" globalConfig.deployment.launcher.image",
+		)
+	}
+
+	shell := strings.TrimSpace(terminal.Shell)
+	if shell == "" {
+		shell = clabernetesinternaldirectruntime.WebTerminalShellDefault
+	}
+
+	trueValue := true
+	rootUser := int64(0)
+	always := k8scorev1.ContainerRestartPolicyAlways
+
+	// tmux keeps the shell alive between browser sessions, so a reconnect lands in the same
+	// session with its scrollback; ttyd serves the pty and serves the browser client.
+	command := []string{
+		"/usr/bin/ttyd",
+		"--port", strconv.Itoa(clabernetesconstants.WebTerminalPort),
+		"--writable",
+		"--client-option", "titleFixed=" + options.Name,
+		"tmux", "new", "-A", "-s", webTerminalSessionName,
+		webTerminalBinaryPath, runtimeCommandName, "terminal",
+		runtimeFlagProcessIDFile, webTerminalProcessIDPath(nodeID),
+		runtimeFlagShell, shell,
+	}
+
+	container := &k8scorev1.Container{
+		Name:            webTerminalName,
+		Image:           launcherImage,
+		Command:         command,
+		RestartPolicy:   &always,
+		VolumeMounts:    []k8scorev1.VolumeMount{webTerminalVolumeMount()},
+		SecurityContext: &k8scorev1.SecurityContext{Privileged: &trueValue, RunAsUser: &rootUser},
+		Ports: []k8scorev1.ContainerPort{{
+			Name:          webTerminalName,
+			ContainerPort: clabernetesconstants.WebTerminalPort,
+			Protocol:      k8scorev1.ProtocolTCP,
+		}},
+	}
+
+	if options.LauncherImagePullPolicy != "" {
+		policy, err := pullPolicy(options.LauncherImagePullPolicy)
+		if err != nil {
+			return nil, fmt.Errorf("launcher image: %w", err)
+		}
+
+		container.ImagePullPolicy = policy
+	}
+
+	return container, nil
+}
+
+func planHasNode(plan clabernetesinternaldeviceplan.Plan, nodeID string) bool {
+	for _, container := range plan.Containers {
+		if container.NodeID == nodeID {
+			return true
+		}
+	}
+
+	return false
 }
 
 func hasImportedEndpointLifecycle(plan clabernetesinternaldeviceplan.Plan) bool {

@@ -167,10 +167,16 @@ func (r *ServiceReconciler) RenderExposeService(
 	ports := make([]k8scorev1.ServicePort, len(exposedPorts.Ports))
 
 	for idx, port := range exposedPorts.Ports {
+		name := fmt.Sprintf(
+			"port-%d-%s", port.DestinationPort, strings.ToLower(port.Protocol),
+		)
+		if node.Spec.TTYDShell != "" &&
+			port.DestinationPort == clabernetesconstants.WebTerminalPort &&
+			strings.EqualFold(port.Protocol, clabernetesconstants.TCP) {
+			name = "ttyd"
+		}
 		ports[idx] = k8scorev1.ServicePort{
-			Name: fmt.Sprintf(
-				"port-%d-%s", port.DestinationPort, strings.ToLower(port.Protocol),
-			),
+			Name:        name,
 			Protocol:    k8scorev1.Protocol(port.Protocol),
 			AppProtocol: resolvedAppProtocol(node, port),
 			Port:        int32(port.DestinationPort), //nolint:gosec

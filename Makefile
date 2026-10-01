@@ -28,6 +28,7 @@ C9S_IMAGE_INPUT_PATHS := \
 	manager \
 	util \
 	build/manager.Dockerfile \
+	build/launcher.Dockerfile \
 	build/clabverter.Dockerfile
 C9S_IMAGE_INPUT_STATUS := $(shell for path in $(C9S_IMAGE_INPUT_PATHS); do git status --porcelain -- "$$path"; done)
 C9S_WORKTREE_HASH := $(shell { for path in $(C9S_IMAGE_INPUT_PATHS); do git ls-files --cached --others --exclude-standard -- "$$path"; done | sort -u | while IFS= read -r file; do if [ ! -e "$$file" ]; then continue; fi; printf '%s\t' "$$file"; git hash-object "$$file"; done; } | sha256sum | cut -c1-12)
@@ -59,8 +60,9 @@ include .mk/e2e.mk
 ## Image names + tag used by the build-* targets. IMAGE_TAG defaults to "latest"
 ## for one-off local builds; the e2e flow overrides it (IMAGE_TAG=dev-latest).
 IMAGE_TAG ?= latest
-IMAGE_BASE ?= ghcr.io/clabernetes/clabernetes
+IMAGE_BASE ?= ghcr.io/cms-lab-core/cms-labs-clabernetes
 MANAGER_IMAGE ?= $(IMAGE_BASE)/clabernetes-manager
+LAUNCHER_IMAGE ?= $(IMAGE_BASE)/clabernetes-launcher
 CLABVERTER_IMAGE ?= $(IMAGE_BASE)/clabverter
 TARGET_PLATFORM ?= linux/$(ARCH)
 
@@ -91,7 +93,7 @@ VERSION ?= latest
 NS ?= c9s
 DEV_NS ?= c9s-dev
 # Image registry prefix passed to DevSpace as REGISTRY (not the generic REGISTRY env var).
-DEV_REGISTRY ?= ghcr.io/clabernetes/clabernetes
+DEV_REGISTRY ?= ghcr.io/cms-lab-core/cms-labs-clabernetes
 DOCS_SITE_DIR ?= docs-site
 DOCS_HOST ?= 0.0.0.0
 PNPM ?= pnpm
@@ -266,6 +268,9 @@ delete-generated: ## Deletes all zz_*.go (generated) files, and crds
 
 build-manager: ## Builds the clabernetes manager container; typically built via devspace, but this is a handy shortcut for one offs. Override the tag with IMAGE_TAG.
 	docker buildx build --load --platform="$(TARGET_PLATFORM)" --build-arg VERSION=$(C9S_LOCAL_BUILD_ID) -t $(MANAGER_IMAGE):$(IMAGE_TAG) -f ./build/manager.Dockerfile .
+
+build-launcher: ## Builds the launcher container that carries a node's ttyd/tmux web terminal; the distroless manager image cannot host one. Override the tag with IMAGE_TAG.
+	docker buildx build --load --platform="$(TARGET_PLATFORM)" --build-arg VERSION=$(C9S_LOCAL_BUILD_ID) -t $(LAUNCHER_IMAGE):$(IMAGE_TAG) -f ./build/launcher.Dockerfile .
 
 build-clabverter: ## Builds the clabverter container; typically built via devspace, but this is a handy shortcut for one offs. Override the tag with IMAGE_TAG.
 	docker buildx build --load --platform="$(TARGET_PLATFORM)" --build-arg VERSION=$(C9S_LOCAL_BUILD_ID) -t $(CLABVERTER_IMAGE):$(IMAGE_TAG) -f ./build/clabverter.Dockerfile .

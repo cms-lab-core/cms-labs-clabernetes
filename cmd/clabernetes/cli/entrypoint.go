@@ -78,6 +78,9 @@ const (
 	deviceRuntimeSnapLength           = "snapLength"
 	deviceRuntimePacketLimit          = "packetLimit"
 	deviceRuntimeDuration             = "duration"
+	deviceRuntimeProcessIDFile        = "processIDFile"
+	deviceRuntimeShell                = "shell"
+	deviceRuntimeShellTimeout         = "shellTimeout"
 )
 
 // versionPrinterOnce guards the process-global urfave/cli version printer: Entrypoint may be
@@ -337,6 +340,10 @@ func deviceRuntimeCommand() *cli.Command {
 				Flags: []cli.Flag{
 					&cli.StringFlag{Name: deviceRuntimePlan, Required: true},
 					&cli.StringFlag{Name: deviceRuntimeContainer, Required: true},
+					// A node with a web terminal publishes its own process id before it becomes
+					// the device process; the terminal sidecar waits for that id and joins the
+					// namespaces of whatever holds it afterwards.
+					&cli.StringFlag{Name: deviceRuntimeProcessIDFile},
 				},
 				Action: func(c *cli.Context) error {
 					planRaw, err := readBoundedFile(c.String(deviceRuntimePlan), 1<<20)
@@ -349,9 +356,38 @@ func deviceRuntimeCommand() *cli.Command {
 						return err
 					}
 
+					if processIDFile := c.String(deviceRuntimeProcessIDFile); processIDFile != "" {
+						// This process is about to be replaced by the device process, and the
+						// replacement keeps the process id, so writing it now publishes the
+						// device's own id rather than a short-lived helper's.
+						if err = clabernetesinternaldirectruntime.WriteProcessIDFile(
+							processIDFile,
+						); err != nil {
+							return err
+						}
+					}
+
 					return clabernetesinternaldirectruntime.RunLaunch(
 						plan,
 						c.String(deviceRuntimeContainer),
+					)
+				},
+			},
+			{
+				Name:  "terminal",
+				Usage: "run a per-node web terminal session inside an application container",
+				Flags: []cli.Flag{
+					&cli.StringFlag{Name: deviceRuntimeProcessIDFile, Required: true},
+					&cli.StringFlag{Name: deviceRuntimeShell},
+					&cli.DurationFlag{Name: deviceRuntimeShellTimeout},
+				},
+				Action: func(c *cli.Context) error {
+					return clabernetesinternaldirectruntime.RunTerminal(
+						clabernetesinternaldirectruntime.WebTerminalOptions{
+							ProcessIDFile: c.String(deviceRuntimeProcessIDFile),
+							Shell:         c.String(deviceRuntimeShell),
+							WaitTimeout:   c.Duration(deviceRuntimeShellTimeout),
+						},
 					)
 				},
 			},

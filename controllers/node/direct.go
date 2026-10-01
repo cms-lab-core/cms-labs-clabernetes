@@ -344,11 +344,13 @@ func (r *Reconciler) reconcileDirect(
 	if err != nil {
 		return err
 	}
+	webTerminals := r.resolveWebTerminals(groupMembers, nodesByName)
 	directExposedPorts, err := compileDirectExposedPorts(
 		*planningResult.Plan,
 		profile,
 		groupMembers,
 		nodesByName,
+		webTerminals,
 	)
 	if err != nil {
 		return err
@@ -388,6 +390,9 @@ func (r *Reconciler) reconcileDirect(
 		ServiceAccountName:         directRuntimeServiceAccountName(),
 		EnableApplicationLogBroker: true,
 		ImagePullSecrets:           imagePullSecrets,
+		WebTerminals:               webTerminals,
+		LauncherImage:              profile.LauncherImage,
+		LauncherImagePullPolicy:    profile.LauncherImagePullPolicy,
 		Labels:                     labels,
 		Annotations:                annotations,
 		CertificateSecretName:      certificateResolution.SecretName,
@@ -711,6 +716,7 @@ func compileDirectExposedPorts(
 	profile *ResolvedProfile,
 	groupMembers []string,
 	nodesByName map[string]*clabernetesapisv1alpha1.Node,
+	webTerminals map[string]clabernetesinternaldirectpod.WebTerminal,
 ) (map[string]*clabernetesapisv1alpha1.NodeExposedPorts, error) {
 	result := make(map[string]*clabernetesapisv1alpha1.NodeExposedPorts, len(groupMembers))
 	if profile == nil {
@@ -747,6 +753,25 @@ func compileDirectExposedPorts(
 				port.DestinationPort,
 				strings.ToUpper(port.Protocol),
 			)] = true
+		}
+	}
+	// boundPorts tracks which member occupies a Pod destination port, independent of whether that
+	// port is exposed. A web terminal binds the shared Pod network namespace itself, so it has to
+	// avoid every occupied port, not only the published ones.
+	boundPorts := map[string]string{}
+	for nodeID, declared := range explicit {
+		for key := range declared {
+			boundPorts[key] = nodeID
+		}
+	}
+	for _, container := range plan.Containers {
+		if nodesByID[container.NodeID] == nil {
+			continue
+		}
+		for _, planned := range container.Ports {
+			boundPorts[fmt.Sprintf(
+				"%d/%s", planned.Number, strings.ToUpper(planned.Protocol),
+			)] = container.NodeID
 		}
 	}
 	portsByNode := map[string]map[string]clabernetesapisv1alpha1.NodeExposedPort{}
@@ -830,6 +855,48 @@ func compileDirectExposedPorts(
 			}
 		}
 	}
+	// The web terminal is served by the Pod's ttyd sidecar rather than by a device container, so
+	// it is not in the plan's port inventory; the Node still exposes it so the usual per-Node
+	// Service publishes the terminal. The sidecar binds the Pod network namespace, so a device
+	// port already claiming 7681 would be unreachable and is rejected here rather than at runtime.
+	if len(webTerminals) > 1 {
+		return nil, planInputError(
+			clabernetesinternaldeviceplan.ErrorUnsupported,
+			"webTerminal",
+			"grouped direct Nodes each request a web terminal, but one device Pod serves one"+
+				" terminal port",
+		)
+	}
+	for nodeID := range webTerminals {
+		if nodesByID[nodeID] == nil {
+			return nil, planInputError(
+				clabernetesinternaldeviceplan.ErrorInvariant,
+				"webTerminal",
+				"web terminal belongs to a Node outside this workload group",
+			)
+		}
+		key := fmt.Sprintf("%d/%s", clabernetesconstants.WebTerminalPort, "TCP")
+		if owner, taken := boundPorts[key]; taken && owner != nodeID {
+			return nil, planInputError(
+				clabernetesinternaldeviceplan.ErrorUnsupported,
+				"services.ports",
+				fmt.Sprintf(
+					"Node %s's web terminal needs pod port %d, which Node %s already exposes",
+					nodesByID[nodeID].GetName(), clabernetesconstants.WebTerminalPort,
+					nodesByID[owner].GetName(),
+				),
+			)
+		}
+		boundPorts[key] = nodeID
+		if portsByNode[nodeID] == nil {
+			portsByNode[nodeID] = map[string]clabernetesapisv1alpha1.NodeExposedPort{}
+		}
+		portsByNode[nodeID][key] = clabernetesapisv1alpha1.NodeExposedPort{
+			DestinationPort: clabernetesconstants.WebTerminalPort,
+			ExposePort:      clabernetesconstants.WebTerminalPort,
+			Protocol:        "TCP",
+		}
+	}
 	owners := map[string]string{}
 	for _, name := range groupMembers {
 		node := nodesByName[name]
@@ -911,6 +978,40 @@ func (r *Reconciler) resolveDirectProfile(
 	}
 
 	return ResolveProfile(node, profile, r.configManagerGetter)
+}
+
+// resolveWebTerminals collects the per-Node web terminals the lab asked for, keyed by node id. A
+// Node's ttyd-shell is resolved per Node (not per group) because the shell belongs to a device
+// image, and a grouped Pod can serve only one terminal port; a second request in the same group is
+// left for the renderer to reject with the reason it cannot be honored.
+func (r *Reconciler) resolveWebTerminals(
+	groupMembers []string,
+	nodesByName map[string]*clabernetesapisv1alpha1.Node,
+) map[string]clabernetesinternaldirectpod.WebTerminal {
+	terminals := map[string]clabernetesinternaldirectpod.WebTerminal{}
+
+	for _, memberName := range groupMembers {
+		member := nodesByName[memberName]
+		if member == nil {
+			continue
+		}
+
+		shell := member.Spec.NodeDefinition.TTYDShell
+		if shell == "" {
+			continue
+		}
+
+		terminals[string(member.GetUID())] = clabernetesinternaldirectpod.WebTerminal{
+			Shell:         shell,
+			LauncherImage: strings.TrimSpace(member.Spec.NodeDefinition.LauncherImage),
+		}
+	}
+
+	if len(terminals) == 0 {
+		return nil
+	}
+
+	return terminals
 }
 
 func validateDirectProfile(profile *ResolvedProfile) error {

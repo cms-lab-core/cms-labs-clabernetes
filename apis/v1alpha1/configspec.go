@@ -40,6 +40,28 @@ type ConfigDeployment struct {
 	// +kubebuilder:default=false
 	// +optional
 	ContainerStopSignals bool `json:"containerStopSignals,omitempty"`
+	// Launcher holds the launcher image settings: the helper image clabernetes adds to a device
+	// Pod for the features the distroless manager image cannot provide itself -- currently the
+	// per-node web terminal. An empty image leaves the launcher unpinned here and defers to the
+	// manager's own LAUNCHER_IMAGE environment (set from the chart's launcher.image value), so an
+	// install that never enables the web terminal needs no launcher at all.
+	// +optional
+	Launcher *ConfigLauncher `json:"launcher,omitempty"`
+}
+
+// ConfigLauncher holds the launcher image settings for the per-node helper containers. It is the
+// cluster-wide default; a Topology's spec.deployment.launcher and a node's containerlab
+// launcher-image field each override it, the former for one topology and the latter for one node.
+type ConfigLauncher struct {
+	// Image is the launcher image, including any tag or digest. Empty means "use the manager's
+	// environment default" (the chart's launcher.image value).
+	// +optional
+	Image string `json:"image,omitempty"`
+	// ImagePullPolicy is the pull policy applied to the launcher image. When empty the device
+	// image's resolved pull policy is used.
+	// +kubebuilder:validation:Enum=always;Always;never;Never;ifnotpresent;IfNotPresent
+	// +optional
+	ImagePullPolicy string `json:"imagePullPolicy,omitempty"`
 }
 
 // RegistryMetadataTrustEntry is one exact registry transport policy used only by the c9s

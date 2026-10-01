@@ -42,6 +42,13 @@ data:
 {{ .Values.globalConfig.deployment.nodeSelectorsByImage | toYaml | indent 4 }}
     ---
   containerStopSignals: "{{ .Values.globalConfig.deployment.containerStopSignals }}"
+  {{- $launcher := .Values.globalConfig.deployment.launcher | default dict }}
+  launcher: |-
+    ---
+    image: {{ include "launcherImage" . }}
+    {{- if $launcher.imagePullPolicy }}
+    imagePullPolicy: {{ $launcher.imagePullPolicy | quote }}
+    {{- end }}
   imagePullPolicy: {{ .Values.globalConfig.imagePull.policy }}
   imagePullSecrets: |-
 {{ .Values.globalConfig.imagePull.pullSecrets | toYaml | indent 4 }}

@@ -36,6 +36,11 @@ jobs:
           - name: clabernetes-manager
             file: build/manager.Dockerfile
             context: "."
+          # The launcher image is what a node with a web terminal runs its ttyd/tmux sidecar
+          # from; the manager image is distroless and cannot carry a terminal.
+          - name: clabernetes-launcher
+            file: build/launcher.Dockerfile
+            context: "."
           - name: clabverter
             file: build/clabverter.Dockerfile
             context: "."
@@ -80,7 +85,7 @@ jobs:
           provenance: false
           cache-from: type=gha,scope=${{ matrix.image.name }}-${{ matrix.platform.arch }}
           cache-to: type=gha,mode=max,scope=${{ matrix.image.name }}-${{ matrix.platform.arch }}
-          outputs: ${{ inputs.push && format('type=image,name=ghcr.io/clabernetes/clabernetes/{0},push-by-digest=true,name-canonical=true,push=true', matrix.image.name) || 'type=cacheonly' }}
+          outputs: ${{ inputs.push && format('type=image,name=ghcr.io/cms-lab-core/cms-labs-clabernetes/{0},push-by-digest=true,name-canonical=true,push=true', matrix.image.name) || 'type=cacheonly' }}
 
       - name: export digest
         if: ${{ inputs.push }}
@@ -107,6 +112,7 @@ jobs:
       matrix:
         image:
           - clabernetes-manager
+          - clabernetes-launcher
           - clabverter
     steps:
       - name: download digests
@@ -130,7 +136,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v6
         with:
-          images: ghcr.io/clabernetes/clabernetes/${{ matrix.image }}
+          images: ghcr.io/cms-lab-core/cms-labs-clabernetes/${{ matrix.image }}
           flavor: latest=auto
           tags: |
             ${{ inputs.tags }}
@@ -141,9 +147,9 @@ jobs:
         run: |
           docker buildx imagetools create \
             $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
-            $(printf 'ghcr.io/clabernetes/clabernetes/${{ matrix.image }}@sha256:%s ' *)
+            $(printf 'ghcr.io/cms-lab-core/cms-labs-clabernetes/${{ matrix.image }}@sha256:%s ' *)
 
       - name: inspect image
         run: |
           docker buildx imagetools inspect \
-            ghcr.io/clabernetes/clabernetes/${{ matrix.image }}:${{ inputs.build-version }}
+            ghcr.io/cms-lab-core/cms-labs-clabernetes/${{ matrix.image }}:${{ inputs.build-version }}

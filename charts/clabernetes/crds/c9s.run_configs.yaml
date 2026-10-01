@@ -54,6 +54,32 @@ spec:
                       kubelets) to enable the ContainerStopSignals feature gate. When false, images that declare a
                       stop signal fail planning rather than silently dropping the signal.
                     type: boolean
+                  launcher:
+                    description: |-
+                      Launcher holds the launcher image settings: the helper image clabernetes adds to a device
+                      Pod for the features the distroless manager image cannot provide itself -- currently the
+                      per-node web terminal. An empty image leaves the launcher unpinned here and defers to the
+                      manager's own LAUNCHER_IMAGE environment (set from the chart's launcher.image value), so an
+                      install that never enables the web terminal needs no launcher at all.
+                    properties:
+                      image:
+                        description: |-
+                          Image is the launcher image, including any tag or digest. Empty means "use the manager's
+                          environment default" (the chart's launcher.image value).
+                        type: string
+                      imagePullPolicy:
+                        description: |-
+                          ImagePullPolicy is the pull policy applied to the launcher image. When empty the device
+                          image's resolved pull policy is used.
+                        enum:
+                        - always
+                        - Always
+                        - never
+                        - Never
+                        - ifnotpresent
+                        - IfNotPresent
+                        type: string
+                    type: object
                   nodeSelectorsByImage:
                     additionalProperties:
                       additionalProperties:

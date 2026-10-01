@@ -86,32 +86,32 @@ After every successful unpublished build, the workflow SHALL publish a job summa
 - **WHEN** new commits are pushed to the source branch
 - **THEN** the earlier workflow summary and chart metadata continue identifying the immutable commit used by `0.0.0-abc1234`
 
-### Requirement: Mutable main development channel
+### Requirement: Mutable cms development channel
 
-Every successful main publication SHALL overwrite OCI chart `0.0.0` as the explicit mutable main channel. That chart SHALL record the full main source SHA and SHALL pin manager and launcher to immutable `0.0.0-<short-sha>` image tags from the same workflow run. The existing `dev-latest` image aliases MAY continue for development tooling but SHALL NOT determine images installed through the main chart.
+Every successful cms publication SHALL overwrite OCI chart `0.0.0` as the explicit mutable cms channel. That chart SHALL record the full cms source SHA and SHALL pin manager and launcher to immutable `0.0.0-<short-sha>` image tags from the same workflow run. The existing `dev-latest` image aliases MAY continue for development tooling but SHALL NOT determine images installed through the cms chart.
 
 #### Scenario: Main merge publishes edge artifacts
 
-- **WHEN** commit `def5678...` is successfully published from main
+- **WHEN** commit `def5678...` is successfully published from cms
 - **THEN** chart `0.0.0` records that full commit and pins both runtime images to `0.0.0-def5678`
 
 #### Scenario: Main advances
 
-- **WHEN** a later main commit publishes successfully
+- **WHEN** a later cms commit publishes successfully
 - **THEN** chart `0.0.0` moves to the later commit while the earlier exact `0.0.0-<short-sha>` image tags remain immutable
 
 #### Scenario: dev-latest moves independently
 
 - **WHEN** a `dev-latest` alias is updated
-- **THEN** an already fetched main chart's explicit manager and launcher values do not resolve through that alias
+- **THEN** an already fetched cms chart's explicit manager and launcher values do not resolve through that alias
 
 ### Requirement: Development artifact installation
 
-Both installation workflows SHALL treat `VERSION=main` as exact chart version `0.0.0` in the development channel and SHALL accept exact unpublished versions matching `0.0.0-<sha>`. Both SHALL probe the exact chart and SHALL never classify either channel as latest stable. Only the try workflow requires source-revision metadata to retrieve a matching demo.
+Both installation workflows SHALL treat `VERSION=cms` as exact chart version `0.0.0` in the development channel and SHALL accept exact unpublished versions matching `0.0.0-<sha>`. Both SHALL probe the exact chart and SHALL never classify either channel as latest stable. Only the try workflow requires source-revision metadata to retrieve a matching demo.
 
-#### Scenario: Install mutable main
+#### Scenario: Install mutable cms
 
-- **WHEN** a user runs `make install VERSION=main`
+- **WHEN** a user runs `make install VERSION=cms`
 - **THEN** the installer probes chart `0.0.0`, reports its recorded source revision, and verifies its pinned manager and launcher images
 
 #### Scenario: Install exact unpublished build
@@ -121,7 +121,7 @@ Both installation workflows SHALL treat `VERSION=main` as exact chart version `0
 
 #### Scenario: Development chart lacks source metadata
 
-- **WHEN** a selected main or unpublished chart does not record a full source revision
+- **WHEN** a selected cms or unpublished chart does not record a full source revision
 - **THEN** `make install` may proceed when the exact chart is available, while `make try-c9s` refuses to apply a source-mismatched demo
 
 #### Scenario: Development workflow run exists but artifacts do not
@@ -131,7 +131,7 @@ Both installation workflows SHALL treat `VERSION=main` as exact chart version `0
 
 ### Requirement: Development-source try demo
 
-For main and exact unpublished builds, `make try-c9s` SHALL retrieve the demo from the full source revision recorded in chart metadata and SHALL apply it only after validating the exact chart and image references.
+For cms and exact unpublished builds, `make try-c9s` SHALL retrieve the demo from the full source revision recorded in chart metadata and SHALL apply it only after validating the exact chart and image references.
 
 #### Scenario: Try unpublished feature build
 

@@ -61,7 +61,7 @@ spec:
       serviceAccountName: "clabernetes-service-account"
       initContainers:
         - name: init
-          image: "ghcr.io/clabernetes/clabernetes/clabernetes-manager:dev-latest"
+          image: "ghcr.io/cms-lab-core/cms-labs-clabernetes/clabernetes-manager:dev-latest"
           imagePullPolicy: IfNotPresent
           command: ["/clabernetes/manager", "run", "--initializer"]
           env:
@@ -82,7 +82,9 @@ spec:
             - name: CONTROLLER_LOGGER_LEVEL
               value: info
             - name: NODE_RUNTIME_IMAGE
-              value: "ghcr.io/clabernetes/clabernetes/clabernetes-manager:dev-latest"
+              value: "ghcr.io/cms-lab-core/cms-labs-clabernetes/clabernetes-manager:dev-latest"
+            - name: LAUNCHER_IMAGE
+              value: "ghcr.io/cms-lab-core/cms-labs-clabernetes/clabernetes-launcher:dev-latest"
             - name: PLANNER_POOL_ENABLED
               value: "true"
             - name: C9S_DIAGNOSTICS
@@ -96,7 +98,7 @@ spec:
               memory: 256Mi
       containers:
         - name: manager
-          image: "ghcr.io/clabernetes/clabernetes/clabernetes-manager:dev-latest"
+          image: "ghcr.io/cms-lab-core/cms-labs-clabernetes/clabernetes-manager:dev-latest"
           imagePullPolicy: IfNotPresent
           command: ["/clabernetes/manager", "run"]
           env:
@@ -117,7 +119,9 @@ spec:
             - name: CONTROLLER_LOGGER_LEVEL
               value: info
             - name: NODE_RUNTIME_IMAGE
-              value: "ghcr.io/clabernetes/clabernetes/clabernetes-manager:dev-latest"
+              value: "ghcr.io/cms-lab-core/cms-labs-clabernetes/clabernetes-manager:dev-latest"
+            - name: LAUNCHER_IMAGE
+              value: "ghcr.io/cms-lab-core/cms-labs-clabernetes/clabernetes-launcher:dev-latest"
             - name: PLANNER_POOL_ENABLED
               value: "true"
             - name: C9S_DIAGNOSTICS

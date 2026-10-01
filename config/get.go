@@ -2,9 +2,11 @@ package config
 
 import (
 	"maps"
+	"os"
 	"slices"
 
 	clabernetesapisv1alpha1 "github.com/clabernetes/clabernetes/apis/v1alpha1"
+	clabernetesconstants "github.com/clabernetes/clabernetes/constants"
 	k8scorev1 "k8s.io/api/core/v1"
 )
 
@@ -102,6 +104,31 @@ func (m *manager) GetContainerStopSignals() bool {
 	defer m.lock.RUnlock()
 
 	return m.config.Deployment.ContainerStopSignals
+}
+
+// GetLauncherImage returns the Config CR's launcher image, falling back to the manager's
+// environment default (the chart's launcher.image) so an install that only sets the Helm value
+// still resolves a launcher.
+func (m *manager) GetLauncherImage() string {
+	m.lock.RLock()
+	defer m.lock.RUnlock()
+
+	if m.config.Deployment.Launcher == nil || m.config.Deployment.Launcher.Image == "" {
+		return os.Getenv(clabernetesconstants.LauncherImageEnv)
+	}
+
+	return m.config.Deployment.Launcher.Image
+}
+
+func (m *manager) GetLauncherImagePullPolicy() string {
+	m.lock.RLock()
+	defer m.lock.RUnlock()
+
+	if m.config.Deployment.Launcher == nil {
+		return ""
+	}
+
+	return m.config.Deployment.Launcher.ImagePullPolicy
 }
 
 func (m *manager) GetRolloutBatchSize() int32 {

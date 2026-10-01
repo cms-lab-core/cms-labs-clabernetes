@@ -4,7 +4,7 @@ set -euo pipefail
 
 ORAS="${ORAS:-oras}"
 SOURCE_BASE="${SOURCE_BASE:-ghcr.io/srl-labs/clabernetes}"
-DESTINATION_BASE="${DESTINATION_BASE:-ghcr.io/clabernetes/clabernetes}"
+DESTINATION_BASE="${DESTINATION_BASE:-ghcr.io/cms-lab-core/cms-labs-clabernetes}"
 DRY_RUN="${DRY_RUN:-true}"
 
 packages=(

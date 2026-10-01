@@ -42,7 +42,7 @@ jobs:
       - name: publish Artifact Hub repository metadata
         if: ${{ inputs.dry_run == false }}
         run: |
-          oras push ghcr.io/clabernetes/clabernetes/clabernetes:artifacthub.io \
+          oras push ghcr.io/cms-lab-core/cms-labs-clabernetes/clabernetes:artifacthub.io \
             --config /dev/null:application/vnd.cncf.artifacthub.config.v1+yaml \
             charts/clabernetes/artifacthub-repo.yml:application/vnd.cncf.artifacthub.repository-metadata.layer.v1.yaml
 

@@ -4,6 +4,7 @@ package node
 import (
 	"encoding/json"
 	"errors"
+	"strings"
 	"testing"
 
 	clabernetesapisv1alpha1 "github.com/clabernetes/clabernetes/apis/v1alpha1"
@@ -240,4 +241,47 @@ func assertCompiledInterface(
 	}
 
 	t.Fatalf("interface %q is missing from %#v", name, interfaces)
+}
+
+// TestCompilePlanInputKeepsPodOwnedNodeFieldsOutOfThePlan pins the boundary between the node CR's
+// vocabulary and the planner's: the launcher image and the web terminal request are Pod-level
+// inputs, and the planner decodes a definition strictly into the imported containerlab type that
+// knows neither field. Leaving one in would make every terminal-enabled node unplannable.
+func TestCompilePlanInputKeepsPodOwnedNodeFieldsOutOfThePlan(t *testing.T) {
+	t.Parallel()
+
+	node := planInputTestNode("future-a", "uid-future-a", "opaque-package-kind", "example/device:1")
+	node.Spec.NodeDefinition.LauncherImage = "example/c9s-launcher:debug"
+	node.Spec.NodeDefinition.TTYDShell = "cli"
+
+	input, err := CompilePlanInput(PlanInputCompileRequest{
+		Primary:       node,
+		NodesByName:   map[string]*clabernetesapisv1alpha1.Node{node.GetName(): node},
+		GroupMembers:  []string{node.GetName()},
+		Compatibility: planInputTestCompatibility(),
+		Images: []clabernetesinternaldeviceplan.ImageInput{
+			planInputTestImage(node, node.Spec.Image),
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, field := range podOwnedNodeFields() {
+		if strings.Contains(string(input.Nodes[0].Definition), field) {
+			t.Fatalf(
+				"plan input definition carries pod-owned field %q: %s",
+				field,
+				input.Nodes[0].Definition,
+			)
+		}
+	}
+
+	// The rest of the definition has to survive the split, or the device would be planned from
+	// nothing but its name.
+	for _, field := range []string{"opaque-package-kind", "example/device:1"} {
+		if !strings.Contains(string(input.Nodes[0].Definition), field) {
+			t.Fatalf("plan input definition lost %q: %s", field, input.Nodes[0].Definition)
+		}
+	}
 }

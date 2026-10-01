@@ -32,6 +32,11 @@ type Clabernetes interface { //nolint: interfacebloat
 	// GetNodeRuntimeImage returns the c9s manager image used by direct-runtime workers/helpers.
 	GetNodeRuntimeImage() string
 
+	// GetLauncherImage returns the installation-wide launcher image default, as supplied by the
+	// chart's globalConfig.deployment.launcher.image value. The config CR and per-node/per-topology
+	// overrides are resolved above this.
+	GetLauncherImage() string
+
 	// IsInitializer returns true if the clabernetes instance is an initializer instance -- if true
 	// this means that this instance should update crds and other initialization resources.
 	IsInitializer() bool

@@ -26,6 +26,8 @@ type fakeManager struct {
 	registryMetadataTrust       []clabernetesapisv1alpha1.RegistryMetadataTrustEntry
 	registryMetadataMirrors     []clabernetesapisv1alpha1.RegistryMetadataMirrorEntry
 	containerStopSignals        bool
+	launcherImage               string
+	launcherImagePullPolicy     string
 	rolloutBatchSize            int32
 	rolloutMaxConcurrentPerHost int32
 }
@@ -135,6 +137,22 @@ func (f fakeManager) GetRegistryMetadataMirrors() (
 
 func (f fakeManager) GetContainerStopSignals() bool {
 	return f.containerStopSignals
+}
+
+// WithLauncher configures the launcher image and pull policy on the fake manager.
+func WithLauncher(image, imagePullPolicy string) FakeOption {
+	return func(fm *fakeManager) {
+		fm.launcherImage = image
+		fm.launcherImagePullPolicy = imagePullPolicy
+	}
+}
+
+func (f fakeManager) GetLauncherImage() string {
+	return f.launcherImage
+}
+
+func (f fakeManager) GetLauncherImagePullPolicy() string {
+	return f.launcherImagePullPolicy
 }
 
 // WithRolloutBatchSize configures the installation-wide startup limit for tests.
